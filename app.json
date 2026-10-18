@@ -1,4 +1,7 @@
 {
   "name": "CardboardApp",
-  "displayName": "CardboardApp"
+  "displayName": "CardboardApp",
+  "plugins": [
+    "expo-video"
+  ]
 }
