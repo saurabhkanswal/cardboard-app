@@ -27,6 +27,7 @@ export function ShowcaseScreen() {
     retry,
     viewabilityConfig,
     getViewabilityHandler,
+    onPressVideo,
   } = useShowcaseScreenController();
   const insets = useSafeAreaInsets();
 
@@ -39,9 +40,10 @@ export function ShowcaseScreen() {
         playingIds={playingIds}
         onViewableItemsChanged={getViewabilityHandler(item.id)}
         viewabilityConfig={viewabilityConfig}
+        onPressVideo={onPressVideo}
       />
     ),
-    [playingIds, getViewabilityHandler, viewabilityConfig],
+    [playingIds, getViewabilityHandler, viewabilityConfig, onPressVideo],
   );
 
   if (isLoading) {

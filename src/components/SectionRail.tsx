@@ -26,6 +26,7 @@ interface SectionRailProps {
   playingIds: Set<string>;
   onViewableItemsChanged: (info: {viewableItems: ViewToken[]}) => void;
   viewabilityConfig: {itemVisiblePercentThreshold: number};
+  onPressVideo: (p: {sectionId: string; videoId: string; uri: string}) => void;
 }
 
 const TILE_GAP = spacing.md;
@@ -37,14 +38,27 @@ function SectionRailComponent({
   playingIds,
   onViewableItemsChanged,
   viewabilityConfig,
+  onPressVideo,
 }: SectionRailProps) {
+  // One stable handler for the whole rail so tapping doesn't re-render every tile.
+  const handlePress = useCallback(
+    (videoId: string, uri: string) =>
+      onPressVideo({sectionId, videoId, uri}),
+    [onPressVideo, sectionId],
+  );
+
   const renderItem: ListRenderItem<RailVideo> = useCallback(
     ({item}) => (
       <View style={styles.tileWrapper}>
-        <VideoTile uri={item.url} shouldPlay={playingIds.has(item.id)} />
+        <VideoTile
+          videoId={item.id}
+          uri={item.url}
+          shouldPlay={playingIds.has(item.id)}
+          onPress={handlePress}
+        />
       </View>
     ),
-    [playingIds],
+    [playingIds, handlePress],
   );
 
   // URLs repeat across sections, so key by sectionId + videoId.

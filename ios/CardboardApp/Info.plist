@@ -33,8 +33,14 @@
       <key>NSAllowsLocalNetworking</key>
       <true/>
     </dict>
+    <key>NSCameraUsageDescription</key>
+    <string>We use the camera to scan the pairing QR code shown by your laptop bridge.</string>
+    <key>NSLocalNetworkUsageDescription</key>
+    <string>We connect to the Cardboard bridge running on your laptop over the local network.</string>
     <key>NSLocationWhenInUseUsageDescription</key>
     <string/>
+    <key>NSPhotoLibraryUsageDescription</key>
+    <string>We need access to your photo library so you can pick a video or image to remix.</string>
     <key>RCTNewArchEnabled</key>
     <true/>
     <key>UIApplicationSceneManifest</key>

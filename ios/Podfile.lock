@@ -34,11 +34,19 @@ PODS:
     - Yoga
   - ExpoAsset (58.0.16):
     - ExpoModulesCore
+  - ExpoCamera (58.0.10):
+    - ExpoModulesCore
+  - ExpoCameraBarcodeScanning (58.0.10):
+    - ExpoCamera
+    - ZXingObjC/OneD
+    - ZXingObjC/PDF417
   - ExpoDomWebView (58.0.2):
     - ExpoModulesCore
   - ExpoFileSystem (58.0.9):
     - ExpoModulesCore
   - ExpoFont (58.0.8):
+    - ExpoModulesCore
+  - ExpoImagePicker (58.0.10):
     - ExpoModulesCore
   - ExpoKeepAwake (58.0.3):
     - ExpoModulesCore
@@ -75,6 +83,11 @@ PODS:
   - ExpoModulesWorklets (58.0.22):
     - ExpoModulesCore
     - ExpoModulesJSI
+  - ExpoModulesWorkletsAdapter (58.0.22):
+    - ExpoModulesCore
+    - ExpoModulesJSI
+    - ExpoModulesWorklets
+    - RNWorklets
   - ExpoVideo (58.0.11):
     - ExpoModulesCore
   - fast_float (8.0.0):
@@ -1495,6 +1508,31 @@ PODS:
     - ReactCommon/turbomodule/core
     - ReactNativeDependencies
     - Yoga
+  - react-native-skia (2.14.0):
+    - hermes-engine
+    - RCTRequired
+    - RCTTypeSafety
+    - React
+    - React-bridging
+    - React-callinvoker
+    - React-Core
+    - React-Core-prebuilt
+    - React-cxxstableapi
+    - React-debug
+    - React-Fabric
+    - React-featureflags
+    - React-graphics
+    - React-ImageManager
+    - React-jsi
+    - React-NativeModulesApple
+    - React-RCTFabric
+    - React-renderercss
+    - React-rendererdebug
+    - React-utils
+    - ReactCodegen
+    - ReactCommon/turbomodule/core
+    - ReactNativeDependencies
+    - Yoga
   - React-NativeModulesApple (0.88.0):
     - hermes-engine
     - React-bridging
@@ -1887,6 +1925,109 @@ PODS:
     - React-utils (= 0.88.0)
     - ReactNativeDependencies
   - ReactNativeDependencies (0.88.0)
+  - RNReanimated (4.7.1):
+    - hermes-engine
+    - RCTRequired
+    - RCTTypeSafety
+    - React-bridging
+    - React-Core
+    - React-Core-prebuilt
+    - React-cxxstableapi
+    - React-debug
+    - React-Fabric
+    - React-featureflags
+    - React-graphics
+    - React-hermes
+    - React-ImageManager
+    - React-jsi
+    - React-NativeModulesApple
+    - React-RCTFabric
+    - React-renderercss
+    - React-rendererdebug
+    - React-utils
+    - ReactCodegen
+    - ReactCommon/turbomodule/core
+    - ReactNativeDependencies
+    - RNReanimated/apple (= 4.7.1)
+    - RNReanimated/common (= 4.7.1)
+    - RNReanimated/view (= 4.7.1)
+    - RNWorklets
+    - Yoga
+  - RNReanimated/apple (4.7.1):
+    - hermes-engine
+    - RCTRequired
+    - RCTTypeSafety
+    - React-bridging
+    - React-Core
+    - React-Core-prebuilt
+    - React-cxxstableapi
+    - React-debug
+    - React-Fabric
+    - React-featureflags
+    - React-graphics
+    - React-hermes
+    - React-ImageManager
+    - React-jsi
+    - React-NativeModulesApple
+    - React-RCTFabric
+    - React-renderercss
+    - React-rendererdebug
+    - React-utils
+    - ReactCodegen
+    - ReactCommon/turbomodule/core
+    - ReactNativeDependencies
+    - RNWorklets
+    - Yoga
+  - RNReanimated/common (4.7.1):
+    - hermes-engine
+    - RCTRequired
+    - RCTTypeSafety
+    - React-bridging
+    - React-Core
+    - React-Core-prebuilt
+    - React-cxxstableapi
+    - React-debug
+    - React-Fabric
+    - React-featureflags
+    - React-graphics
+    - React-hermes
+    - React-ImageManager
+    - React-jsi
+    - React-NativeModulesApple
+    - React-RCTFabric
+    - React-renderercss
+    - React-rendererdebug
+    - React-utils
+    - ReactCodegen
+    - ReactCommon/turbomodule/core
+    - ReactNativeDependencies
+    - RNWorklets
+    - Yoga
+  - RNReanimated/view (4.7.1):
+    - hermes-engine
+    - RCTRequired
+    - RCTTypeSafety
+    - React-bridging
+    - React-Core
+    - React-Core-prebuilt
+    - React-cxxstableapi
+    - React-debug
+    - React-Fabric
+    - React-featureflags
+    - React-graphics
+    - React-hermes
+    - React-ImageManager
+    - React-jsi
+    - React-NativeModulesApple
+    - React-RCTFabric
+    - React-renderercss
+    - React-rendererdebug
+    - React-utils
+    - ReactCodegen
+    - ReactCommon/turbomodule/core
+    - ReactNativeDependencies
+    - RNWorklets
+    - Yoga
   - RNScreens (4.30.0):
     - hermes-engine
     - RCTRequired
@@ -1983,10 +2124,89 @@ PODS:
     - ReactCommon/turbomodule/core
     - ReactNativeDependencies
     - Yoga
+  - RNWorklets (0.13.0):
+    - hermes-engine
+    - RCTRequired
+    - RCTTypeSafety
+    - React-bridging
+    - React-Core
+    - React-Core-prebuilt
+    - React-cxxstableapi
+    - React-debug
+    - React-Fabric
+    - React-featureflags
+    - React-graphics
+    - React-hermes
+    - React-ImageManager
+    - React-jsi
+    - React-NativeModulesApple
+    - React-RCTFabric
+    - React-renderercss
+    - React-rendererdebug
+    - React-utils
+    - ReactCodegen
+    - ReactCommon/turbomodule/core
+    - ReactNativeDependencies
+    - RNWorklets/apple (= 0.13.0)
+    - RNWorklets/common (= 0.13.0)
+    - Yoga
+  - RNWorklets/apple (0.13.0):
+    - hermes-engine
+    - RCTRequired
+    - RCTTypeSafety
+    - React-bridging
+    - React-Core
+    - React-Core-prebuilt
+    - React-cxxstableapi
+    - React-debug
+    - React-Fabric
+    - React-featureflags
+    - React-graphics
+    - React-hermes
+    - React-ImageManager
+    - React-jsi
+    - React-NativeModulesApple
+    - React-RCTFabric
+    - React-renderercss
+    - React-rendererdebug
+    - React-utils
+    - ReactCodegen
+    - ReactCommon/turbomodule/core
+    - ReactNativeDependencies
+    - Yoga
+  - RNWorklets/common (0.13.0):
+    - hermes-engine
+    - RCTRequired
+    - RCTTypeSafety
+    - React-bridging
+    - React-Core
+    - React-Core-prebuilt
+    - React-cxxstableapi
+    - React-debug
+    - React-Fabric
+    - React-featureflags
+    - React-graphics
+    - React-hermes
+    - React-ImageManager
+    - React-jsi
+    - React-NativeModulesApple
+    - React-RCTFabric
+    - React-renderercss
+    - React-rendererdebug
+    - React-utils
+    - ReactCodegen
+    - ReactCommon/turbomodule/core
+    - ReactNativeDependencies
+    - Yoga
   - SocketRocket (0.7.1):
     - ReactNativeDependencies
   - Yoga (0.0.0):
     - React-Core-prebuilt
+  - ZXingObjC/Core (3.6.9)
+  - ZXingObjC/OneD (3.6.9):
+    - ZXingObjC/Core
+  - ZXingObjC/PDF417 (3.6.9):
+    - ZXingObjC/Core
 
 DEPENDENCIES:
   - boost (from `build/rndeps-facades/boost`)
@@ -1994,14 +2214,18 @@ DEPENDENCIES:
   - EXConstants (from `../node_modules/expo/node_modules/expo-constants/ios`)
   - Expo (from `../node_modules/expo`)
   - ExpoAsset (from `../node_modules/expo/node_modules/expo-asset/ios`)
+  - ExpoCamera (from `../node_modules/expo-camera/ios`)
+  - ExpoCameraBarcodeScanning (from `../node_modules/expo-camera/ios`)
   - "ExpoDomWebView (from `../node_modules/expo/node_modules/@expo/dom-webview/ios`)"
   - ExpoFileSystem (from `../node_modules/expo/node_modules/expo-file-system/ios`)
   - ExpoFont (from `../node_modules/expo/node_modules/expo-font/ios`)
+  - ExpoImagePicker (from `../node_modules/expo-image-picker/ios`)
   - ExpoKeepAwake (from `../node_modules/expo/node_modules/expo-keep-awake/ios`)
   - "ExpoLogBox (from `../node_modules/expo/node_modules/@expo/log-box`)"
   - ExpoModulesCore (from `../node_modules/expo-modules-core`)
   - ExpoModulesJSI (from `../node_modules/expo-modules-jsi/apple`)
   - ExpoModulesWorklets (from `../node_modules/expo-modules-core`)
+  - ExpoModulesWorkletsAdapter (from `../node_modules/expo-modules-core`)
   - ExpoVideo (from `../node_modules/expo-video/ios`)
   - fast_float (from `build/rndeps-facades/fast_float`)
   - FBLazyVector (from `build/rncore-facades/FBLazyVector`)
@@ -2050,6 +2274,7 @@ DEPENDENCIES:
   - React-microtasksnativemodule (from `../node_modules/react-native/ReactCommon/react/nativemodule/microtasks`)
   - React-mutationobservernativemodule (from `../node_modules/react-native/ReactCommon/react/nativemodule/mutationobserver`)
   - react-native-safe-area-context (from `../node_modules/react-native-safe-area-context`)
+  - "react-native-skia (from `../node_modules/@shopify/react-native-skia`)"
   - React-NativeModulesApple (from `../node_modules/react-native/ReactCommon/react/nativemodule/core/platform/ios`)
   - React-networking (from `../node_modules/react-native/ReactCommon/react/networking`)
   - React-oscompat (from `../node_modules/react-native/ReactCommon/oscompat`)
@@ -2087,10 +2312,16 @@ DEPENDENCIES:
   - ReactCodegen (from `build/generated/ios/ReactCodegen`)
   - ReactCommon/turbomodule/core (from `../node_modules/react-native/ReactCommon`)
   - ReactNativeDependencies (from `../node_modules/react-native/third-party-podspecs/ReactNativeDependencies.podspec`)
+  - RNReanimated (from `../node_modules/react-native-reanimated`)
   - RNScreens (from `../node_modules/react-native-screens`)
   - RNSVG (from `../node_modules/react-native-svg`)
+  - RNWorklets (from `../node_modules/react-native-worklets`)
   - SocketRocket (from `build/rndeps-facades/SocketRocket`)
   - Yoga (from `build/rncore-facades/Yoga`)
+
+SPEC REPOS:
+  trunk:
+    - ZXingObjC
 
 EXTERNAL SOURCES:
   boost:
@@ -2103,12 +2334,18 @@ EXTERNAL SOURCES:
     :path: "../node_modules/expo"
   ExpoAsset:
     :path: "../node_modules/expo/node_modules/expo-asset/ios"
+  ExpoCamera:
+    :path: "../node_modules/expo-camera/ios"
+  ExpoCameraBarcodeScanning:
+    :path: "../node_modules/expo-camera/ios"
   ExpoDomWebView:
     :path: "../node_modules/expo/node_modules/@expo/dom-webview/ios"
   ExpoFileSystem:
     :path: "../node_modules/expo/node_modules/expo-file-system/ios"
   ExpoFont:
     :path: "../node_modules/expo/node_modules/expo-font/ios"
+  ExpoImagePicker:
+    :path: "../node_modules/expo-image-picker/ios"
   ExpoKeepAwake:
     :path: "../node_modules/expo/node_modules/expo-keep-awake/ios"
   ExpoLogBox:
@@ -2118,6 +2355,8 @@ EXTERNAL SOURCES:
   ExpoModulesJSI:
     :path: "../node_modules/expo-modules-jsi/apple"
   ExpoModulesWorklets:
+    :path: "../node_modules/expo-modules-core"
+  ExpoModulesWorkletsAdapter:
     :path: "../node_modules/expo-modules-core"
   ExpoVideo:
     :path: "../node_modules/expo-video/ios"
@@ -2214,6 +2453,8 @@ EXTERNAL SOURCES:
     :path: "../node_modules/react-native/ReactCommon/react/nativemodule/mutationobserver"
   react-native-safe-area-context:
     :path: "../node_modules/react-native-safe-area-context"
+  react-native-skia:
+    :path: "../node_modules/@shopify/react-native-skia"
   React-NativeModulesApple:
     :path: "../node_modules/react-native/ReactCommon/react/nativemodule/core/platform/ios"
   React-networking:
@@ -2288,10 +2529,14 @@ EXTERNAL SOURCES:
     :path: "../node_modules/react-native/ReactCommon"
   ReactNativeDependencies:
     :podspec: "../node_modules/react-native/third-party-podspecs/ReactNativeDependencies.podspec"
+  RNReanimated:
+    :path: "../node_modules/react-native-reanimated"
   RNScreens:
     :path: "../node_modules/react-native-screens"
   RNSVG:
     :path: "../node_modules/react-native-svg"
+  RNWorklets:
+    :path: "../node_modules/react-native-worklets"
   SocketRocket:
     :path: build/rndeps-facades/SocketRocket
   Yoga:
@@ -2303,14 +2548,18 @@ SPEC CHECKSUMS:
   EXConstants: 8d855ca919f1ff90af258a07e9d5c2135b5bdc7c
   Expo: 4fa2e737c5ee604ad71851aa0a3129076811d844
   ExpoAsset: eb6a76a47d910a3386622d8df6be48ff991d63ec
+  ExpoCamera: 1d919eb4219a3a3e7acb28cafc6e641acbf501b5
+  ExpoCameraBarcodeScanning: c443f05e519b27e058548f02ea9ed4517bd15436
   ExpoDomWebView: 0d5f78af2d77c988ed5032ec33c0729d3f27936d
   ExpoFileSystem: 30f81802fb5d32e4e3bae888379adac5bc0ea676
   ExpoFont: 4718e530d21b883ab9e2e7cdac354e83f162a299
+  ExpoImagePicker: c2d88de532d2643e34647bc93a0f10da350f2e4f
   ExpoKeepAwake: 4b1d72985be0a6762469631fb767160859ce4284
   ExpoLogBox: 2300905d143a11a7a7d2110dbc7c1f074ca297c9
   ExpoModulesCore: b488fecfef62ddc399d927ab91783e877c4c56b4
   ExpoModulesJSI: c9c0f51a8d697acd389d9d62e7607e37433b5c1a
   ExpoModulesWorklets: 732571d0eb77490afb453b46c2a7cb1a73dff592
+  ExpoModulesWorkletsAdapter: f1aeab5ed662bc146ab33738326e56833fe1f39e
   ExpoVideo: 9bf1792d7509e90617e513770786df786b902f27
   fast_float: 908e5ee35999f3d91af4b962ac951acac591866c
   FBLazyVector: 953381a667ad5f4119b929026e53c4f3aa0da7e7
@@ -2358,6 +2607,7 @@ SPEC CHECKSUMS:
   React-microtasksnativemodule: b8478c203a5d65f5729a5d72564b5625306246d2
   React-mutationobservernativemodule: 4b42b9a136d149799864720e5201a9ce190d2bef
   react-native-safe-area-context: 0b8493ec23174c2d819f3281f80d5505557fcdbe
+  react-native-skia: 91a8d4869ddc9e048087ea04c19e2c07612baf27
   React-NativeModulesApple: cb7ad2bcca44bc4e65eff580b7a7c2d2c6914fa0
   React-networking: 71c78b3c3afca071b8534b10ee501177b7938c9b
   React-oscompat: 15c32b3f1e17618e60658411167c2746857fbba5
@@ -2395,10 +2645,13 @@ SPEC CHECKSUMS:
   ReactCodegen: 5b3cdb1f612a81f3b543a94f425ecd8518c32f2c
   ReactCommon: c6895b36d81986f89a7e40a00b4b72ca70e82710
   ReactNativeDependencies: d3b7423ba1e52525e42085c8470109abde583d2e
+  RNReanimated: 02d6b0d54a0d4e9e02659f19be971935a371d12d
   RNScreens: a56a0eca6efd7175da435cdef59aa45bfeb244ed
   RNSVG: ff258e92ebf710458755537fb151a47973dfbad9
+  RNWorklets: ec2adca24e3ce8d80b14b976cfe7b8d22b9d7682
   SocketRocket: d57b1af80c029e12a75cd9b218287c67381e4593
   Yoga: 58b502c52b14ad3c4468805d461fc37d275c2a42
+  ZXingObjC: 8898711ab495761b2dbbdec76d90164a6d7e14c5
 
 PODFILE CHECKSUM: 4b279f49c466cf44bfd73ca3e5d7bcc0e98265e4
 

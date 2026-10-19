@@ -1,6 +1,6 @@
 import {useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import {AppState, type ListViewToken as ViewToken} from 'react-native';
-import {useIsFocused} from '@react-navigation/native';
+import {useIsFocused, useNavigation} from '@react-navigation/native';
 import {useShowcaseViewModel} from '../../viewmodel/showcase/useShowcaseViewModel';
 import {
   DEFAULT_MAX_PLAYING,
@@ -20,6 +20,12 @@ export interface ShowcaseScreenController {
   viewabilityConfig: {itemVisiblePercentThreshold: number};
   /** Stable `onViewableItemsChanged` handler for a given rail. */
   getViewabilityHandler: (sectionId: string) => ViewabilityHandler;
+  /** Opens the remix modal for a tapped video. */
+  onPressVideo: (p: {
+    sectionId: string;
+    videoId: string;
+    uri: string;
+  }) => void;
 }
 
 /**
@@ -31,6 +37,7 @@ export interface ShowcaseScreenController {
  */
 export function useShowcaseScreenController(): ShowcaseScreenController {
   const {sections, isLoading, error, refetch} = useShowcaseViewModel();
+  const navigation = useNavigation();
 
   // Visible tile ids per rail, keyed by sectionId.
   const [visibleByRail, setVisibleByRail] = useState<Record<string, string[]>>(
@@ -80,6 +87,21 @@ export function useShowcaseScreenController(): ShowcaseScreenController {
     return new Set(getPlayableIds(allVisible, DEFAULT_MAX_PLAYING));
   }, [isFocused, isActive, sections, visibleByRail]);
 
+  const onPressVideo = useCallback(
+    ({
+      sectionId,
+      videoId,
+      uri,
+    }: {
+      sectionId: string;
+      videoId: string;
+      uri: string;
+    }) => {
+      navigation.navigate('Remix', {sectionId, videoId, uri});
+    },
+    [navigation],
+  );
+
   return {
     sections,
     isLoading,
@@ -88,5 +110,6 @@ export function useShowcaseScreenController(): ShowcaseScreenController {
     retry: refetch,
     viewabilityConfig,
     getViewabilityHandler,
+    onPressVideo,
   };
 }

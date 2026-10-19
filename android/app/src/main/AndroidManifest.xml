@@ -1,6 +1,11 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- Reading media from the device library to remix (Android 13+, API 33+). -->
+    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
+    <uses-permission android:name="android.permission.READ_MEDIA_VIDEO" />
+    <!-- Scanning the bridge pairing QR code. -->
+    <uses-permission android:name="android.permission.CAMERA" />
 
     <application
       android:name=".MainApplication"

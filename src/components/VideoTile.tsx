@@ -1,11 +1,14 @@
 import React, {useEffect} from 'react';
-import {StyleSheet, View} from 'react-native';
+import {Pressable, StyleSheet} from 'react-native';
 import {useVideoPlayer, VideoView} from 'expo-video';
 import {colors, radius, TILE_HEIGHT, TILE_WIDTH} from '../theme';
 
 interface VideoTileProps {
   uri: string;
   shouldPlay: boolean;
+  videoId?: string;
+  /** Stable tap handler. Receives the tile's id + uri so callers can route. */
+  onPress?: (videoId: string, uri: string) => void;
 }
 
 /**
@@ -15,8 +18,10 @@ interface VideoTileProps {
  * - muted, looping, no controls, cover fit
  * - built-in caching via `useCaching`
  * - neutral placeholder behind the player until the first frame renders
+ * - optional `onPress` wraps the tile in a Pressable (the VideoView keeps
+ *   `pointerEvents="none"` so the tap reaches the Pressable)
  */
-function VideoTileComponent({uri, shouldPlay}: VideoTileProps) {
+function VideoTileComponent({uri, shouldPlay, videoId, onPress}: VideoTileProps) {
   const player = useVideoPlayer({uri, useCaching: true}, p => {
     p.muted = true;
     p.loop = true;
@@ -31,7 +36,11 @@ function VideoTileComponent({uri, shouldPlay}: VideoTileProps) {
   }, [shouldPlay, player]);
 
   return (
-    <View style={styles.container}>
+    <Pressable
+      style={styles.container}
+      onPress={onPress ? () => onPress(videoId ?? '', uri) : undefined}
+      disabled={!onPress}
+      accessibilityRole={onPress ? 'button' : undefined}>
       <VideoView
         style={styles.video}
         player={player}
@@ -39,7 +48,7 @@ function VideoTileComponent({uri, shouldPlay}: VideoTileProps) {
         nativeControls={false}
         pointerEvents="none"
       />
-    </View>
+    </Pressable>
   );
 }
 

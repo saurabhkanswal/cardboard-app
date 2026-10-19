@@ -97,3 +97,8 @@ Business logic never lives in components.
    `RootStackParamList`.
 6. **Verify** — `npx tsc --noEmit` and `npm run lint` must pass (lint will reject
    any cross-layer import you got wrong).
+
+## Feature plans
+
+- [Agentic video editor (talking-head POC)](docs/AGENTIC_EDITOR_PLAN.md) — phased plan for
+  the Skia compositor + laptop bridge (Claude Agent SDK) recipe editor.

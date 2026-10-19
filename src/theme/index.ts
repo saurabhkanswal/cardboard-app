@@ -13,6 +13,9 @@ export const colors = {
   text: '#F5F5F7',
   textMuted: '#9A9AA5',
   accent: '#5B8CFF',
+  success: '#3DDC84',
+  warning: '#F5B942',
+  danger: '#FF5C5C',
 } as const;
 
 export const spacing = {
