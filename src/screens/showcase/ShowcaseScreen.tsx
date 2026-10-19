@@ -9,10 +9,26 @@ import {
   View,
 } from 'react-native';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
+import {HeroHeading, type HeroTerm} from '../../components/HeroHeading';
 import {SectionRail} from '../../components/SectionRail';
+import {type SegmentedTab, SegmentedTabs} from '../../components/SegmentedTabs';
 import type {Section} from '../../viewmodel/showcase/types';
 import {colors, spacing} from '../../theme';
-import {useShowcaseScreenController} from './useShowcaseScreenController';
+import {
+  type ShowcaseTab,
+  useShowcaseScreenController,
+} from './useShowcaseScreenController';
+
+const HERO_TERMS: HeroTerm[] = [
+  {label: 'Content Creators', color: colors.heroCreators},
+  {label: 'YouTubers', color: colors.heroYoutube},
+  {label: 'Influencers', color: colors.heroClaude},
+];
+
+const TABS: SegmentedTab<ShowcaseTab>[] = [
+  {key: 'recipes', label: 'Recipes'},
+  {key: 'projects', label: 'Your projects'},
+];
 
 /**
  * View: pure presentation. Reads its controller and hands data to components.
@@ -20,12 +36,17 @@ import {useShowcaseScreenController} from './useShowcaseScreenController';
  */
 export function ShowcaseScreen() {
   const {
+    activeTab,
+    setActiveTab,
     sections,
     isLoading,
     error,
+    loadedIds,
     playingIds,
     retry,
     viewabilityConfig,
+    sectionViewabilityConfig,
+    onSectionsViewableChanged,
     getViewabilityHandler,
     onPressVideo,
   } = useShowcaseScreenController();
@@ -37,13 +58,20 @@ export function ShowcaseScreen() {
         sectionId={item.id}
         title={item.title}
         videos={item.videos}
+        loadedIds={loadedIds}
         playingIds={playingIds}
         onViewableItemsChanged={getViewabilityHandler(item.id)}
         viewabilityConfig={viewabilityConfig}
         onPressVideo={onPressVideo}
       />
     ),
-    [playingIds, getViewabilityHandler, viewabilityConfig, onPressVideo],
+    [
+      loadedIds,
+      playingIds,
+      getViewabilityHandler,
+      viewabilityConfig,
+      onPressVideo,
+    ],
   );
 
   if (isLoading) {
@@ -69,12 +97,31 @@ export function ShowcaseScreen() {
     <FlatList
       style={styles.container}
       contentContainerStyle={{
-        paddingTop: insets.top + spacing.lg,
-        paddingBottom: insets.bottom + spacing.lg,
+        paddingTop: spacing.xl + spacing.xl + spacing.lg,
+        paddingBottom: insets.bottom + spacing.xl,
       }}
       data={sections}
       renderItem={renderSection}
       keyExtractor={section => section.id}
+      ListHeaderComponent={
+        <>
+          <HeroHeading
+            title="Viral reels, in minutes"
+            prefix="Built for"
+            terms={HERO_TERMS}
+          />
+          <View style={styles.divider} />
+          <View style={styles.tabs}>
+            <SegmentedTabs
+              tabs={TABS}
+              activeKey={activeTab}
+              onChange={setActiveTab}
+            />
+          </View>
+        </>
+      }
+      onViewableItemsChanged={onSectionsViewableChanged}
+      viewabilityConfig={sectionViewabilityConfig}
       showsVerticalScrollIndicator={false}
     />
   );
@@ -84,6 +131,18 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background,
+  },
+  divider: {
+    height: StyleSheet.hairlineWidth,
+    marginTop: spacing.sm,
+    marginHorizontal: spacing.lg,
+    marginBottom: spacing.lg,
+    backgroundColor: colors.divider,
+  },
+  tabs: {
+    alignItems: 'flex-start',
+    paddingHorizontal: spacing.lg,
+    marginBottom: spacing.lg,
   },
   center: {
     alignItems: 'center',

@@ -3,34 +3,36 @@
  * knowledge — anything another screen might reuse lives here.
  */
 
-/** Default cap on how many videos may play at once on the showcase screen. */
-export const DEFAULT_MAX_PLAYING = 3;
+/** Default active window on the showcase screen: 3 rails × 3 tiles = 9 videos. */
+export const DEFAULT_ACTIVE_ROWS = 3;
+export const DEFAULT_ACTIVE_COLUMNS = 3;
 
 /**
- * Given the ids currently visible (in priority order) returns which may actually
- * play, capping concurrency to `max`. Order-preserving and de-duplicated.
+ * Given the visible tile ids of each on-screen rail (rails top-to-bottom, tiles
+ * left-to-right) returns the ids that may be active: the first `rows` rails and
+ * the first `columns` tiles of each. Order-preserving and de-duplicated.
  */
-export function getPlayableIds(
-  visibleIds: string[],
-  max: number = DEFAULT_MAX_PLAYING,
+export function getActiveGridIds(
+  visibleIdsByRail: string[][],
+  rows: number = DEFAULT_ACTIVE_ROWS,
+  columns: number = DEFAULT_ACTIVE_COLUMNS,
 ): string[] {
-  if (max <= 0) {
+  if (rows <= 0 || columns <= 0) {
     return [];
   }
 
   const seen = new Set<string>();
-  const playable: string[] = [];
+  const active: string[] = [];
 
-  for (const id of visibleIds) {
-    if (seen.has(id)) {
-      continue;
-    }
-    seen.add(id);
-    playable.push(id);
-    if (playable.length >= max) {
-      break;
+  for (const railIds of visibleIdsByRail.slice(0, rows)) {
+    for (const id of railIds.slice(0, columns)) {
+      if (seen.has(id)) {
+        continue;
+      }
+      seen.add(id);
+      active.push(id);
     }
   }
 
-  return playable;
+  return active;
 }

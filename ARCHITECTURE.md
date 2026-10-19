@@ -26,7 +26,7 @@ Raw data and I/O only. **No business rules.**
 Business logic and domain shaping. Screen-agnostic; no UI concerns.
 - `<feature>Mappers.ts` — pure DTO → domain mapping.
 - `<feature>Rules.ts` — pure business-rule functions (no React, no Redux). e.g.
-  `getPlayableIds(visibleIds, max)` caps concurrent video playback.
+  `getActiveGridIds(visibleIdsByRail, rows, columns)` picks the active 3×3 video window.
 - `use<Feature>ViewModel.ts` — **the only place RTK Query hooks are called.**
   Returns domain data plus loading/error state and actions.
 

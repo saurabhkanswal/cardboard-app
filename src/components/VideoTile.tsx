@@ -5,6 +5,11 @@ import {colors, radius, TILE_HEIGHT, TILE_WIDTH} from '../theme';
 
 interface VideoTileProps {
   uri: string;
+  /**
+   * Whether to hold a video player at all. Off-screen tiles pass false so they
+   * release their decoder and show the placeholder instead. Defaults to true.
+   */
+  shouldLoad?: boolean;
   shouldPlay: boolean;
   videoId?: string;
   /** Stable tap handler. Receives the tile's id + uri so callers can route. */
@@ -17,11 +22,31 @@ interface VideoTileProps {
  *
  * - muted, looping, no controls, cover fit
  * - built-in caching via `useCaching`
- * - neutral placeholder behind the player until the first frame renders
+ * - neutral placeholder behind the player until the first frame renders, or
+ *   instead of the player while `shouldLoad` is false
  * - optional `onPress` wraps the tile in a Pressable (the VideoView keeps
  *   `pointerEvents="none"` so the tap reaches the Pressable)
  */
-function VideoTileComponent({uri, shouldPlay, videoId, onPress}: VideoTileProps) {
+function VideoTileComponent({
+  uri,
+  shouldLoad = true,
+  shouldPlay,
+  videoId,
+  onPress,
+}: VideoTileProps) {
+  return (
+    <Pressable
+      style={styles.container}
+      onPress={onPress ? () => onPress(videoId ?? '', uri) : undefined}
+      disabled={!onPress}
+      accessibilityRole={onPress ? 'button' : undefined}>
+      {shouldLoad ? <TilePlayer uri={uri} shouldPlay={shouldPlay} /> : null}
+    </Pressable>
+  );
+}
+
+/** Mounted only while the tile is loaded, so the player is created and released with it. */
+function TilePlayer({uri, shouldPlay}: {uri: string; shouldPlay: boolean}) {
   const player = useVideoPlayer({uri, useCaching: true}, p => {
     p.muted = true;
     p.loop = true;
@@ -36,19 +61,13 @@ function VideoTileComponent({uri, shouldPlay, videoId, onPress}: VideoTileProps)
   }, [shouldPlay, player]);
 
   return (
-    <Pressable
-      style={styles.container}
-      onPress={onPress ? () => onPress(videoId ?? '', uri) : undefined}
-      disabled={!onPress}
-      accessibilityRole={onPress ? 'button' : undefined}>
-      <VideoView
-        style={styles.video}
-        player={player}
-        contentFit="cover"
-        nativeControls={false}
-        pointerEvents="none"
-      />
-    </Pressable>
+    <VideoView
+      style={styles.video}
+      player={player}
+      contentFit="cover"
+      nativeControls={false}
+      pointerEvents="none"
+    />
   );
 }
 
@@ -67,7 +86,7 @@ const styles = StyleSheet.create({
 });
 
 /**
- * Memoised: a tile only re-renders when its `uri` or `shouldPlay` changes, so
+ * Memoised: a tile only re-renders when its `uri`, `shouldLoad` or `shouldPlay` changes, so
  * scrolling one rail doesn't re-render tiles in others.
  */
 export const VideoTile = React.memo(VideoTileComponent);

@@ -23,6 +23,8 @@ interface SectionRailProps {
   sectionId: string;
   title: string;
   videos: RailVideo[];
+  /** Tiles that should hold a video player; the rest render a placeholder. */
+  loadedIds: Set<string>;
   playingIds: Set<string>;
   onViewableItemsChanged: (info: {viewableItems: ViewToken[]}) => void;
   viewabilityConfig: {itemVisiblePercentThreshold: number};
@@ -35,6 +37,7 @@ function SectionRailComponent({
   sectionId,
   title,
   videos,
+  loadedIds,
   playingIds,
   onViewableItemsChanged,
   viewabilityConfig,
@@ -53,12 +56,13 @@ function SectionRailComponent({
         <VideoTile
           videoId={item.id}
           uri={item.url}
+          shouldLoad={loadedIds.has(item.id)}
           shouldPlay={playingIds.has(item.id)}
           onPress={handlePress}
         />
       </View>
     ),
-    [playingIds, handlePress],
+    [loadedIds, playingIds, handlePress],
   );
 
   // URLs repeat across sections, so key by sectionId + videoId.
@@ -100,6 +104,7 @@ function SectionRailComponent({
 
 const styles = StyleSheet.create({
   section: {
+    marginTop: spacing.sm,
     marginBottom: spacing.xl,
   },
   heading: {

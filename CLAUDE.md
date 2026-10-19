@@ -48,8 +48,8 @@ and `npm run lint`. Full checklist in `ARCHITECTURE.md`.
 ## Video tiles
 
 `expo-video` player: `muted`, `loop`, no controls, `contentFit="cover"`. A tile only plays
-when its id is in `playingIds` (visibility + screen focus + app foreground, capped to 3
-concurrent via `getPlayableIds`). Pause on blur/background. Tiles are `React.memo`, fixed-size
+when its id is in `playingIds` (visibility + screen focus + app foreground, limited to a
+3×3 window — top 3 on-screen rails × 3 tiles — via `getActiveGridIds`). Pause on blur/background. Tiles are `React.memo`, fixed-size
 with `getItemLayout`, keyed by `sectionId + videoId` (URLs repeat).
 
 ## Performance
