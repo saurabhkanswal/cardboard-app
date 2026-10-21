@@ -57,6 +57,12 @@ export interface SceneFont {
   uri: string;
 }
 
+/** A `<code>` layer rendered for export: full-frame PNGs shown from `start` to `end`. */
+export interface SceneCaptionLayer {
+  id: string;
+  frames: {start: number; end: number; png: Uint8Array}[];
+}
+
 export interface Scene {
   width: number;
   height: number;

@@ -38,6 +38,8 @@ the code to the correct layer instead.
 Redux Toolkit + RTK Query (`fakeBaseQuery` for now) · React Navigation (native stack) +
 react-native-screens + react-native-safe-area-context · `expo-video` (installed via
 `npx install-expo-modules`, Expo SDK 58) with built-in caching (`{ uri, useCaching: true }`).
+Export: `expo-file-system` (cache files) + `expo-media-library` (save to Photos), used only from
+`src/model/export/`.
 
 ## Adding a feature
 

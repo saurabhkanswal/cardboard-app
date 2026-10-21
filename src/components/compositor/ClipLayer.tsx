@@ -68,13 +68,20 @@ export function ClipLayer({clip, frame, clock}: Props) {
     const t = playhead.value;
     const onScreen = isVisibleAt(c.start, c.end, t, duration.value);
     const shouldPlay = onScreen && playing.value && t < c.end;
+    const want = sourceTimeAt(c, t);
     if (paused.value === shouldPlay) {
       paused.value = !shouldPlay;
+      // Just stopped (paused, or the timeline ended and rewound) with the player
+      // elsewhere: `lastSeekTarget` is stale from playback, so force the paused seek.
+      // Otherwise a rewind to 0 is skipped and the player stays parked at its end,
+      // where the next play() does nothing.
+      if (!shouldPlay && Math.abs(currentTime.value / 1000 - want) > SCRUB_STEP_S) {
+        lastSeekTarget.value = -1;
+      }
     }
     if (!onScreen) {
       return;
     }
-    const want = sourceTimeAt(c, t);
 
     if (!shouldPlay) {
       if (Math.abs(want - lastSeekTarget.value) > SCRUB_STEP_S) {

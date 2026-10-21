@@ -32,7 +32,9 @@ PODS:
     - ReactCommon/turbomodule/core
     - ReactNativeDependencies
     - Yoga
-  - ExpoAsset (58.0.16):
+  - ExpoAsset (58.0.17):
+    - ExpoModulesCore
+  - ExpoBlur (58.0.4):
     - ExpoModulesCore
   - ExpoCamera (58.0.10):
     - ExpoModulesCore
@@ -42,15 +44,27 @@ PODS:
     - ZXingObjC/PDF417
   - ExpoDomWebView (58.0.2):
     - ExpoModulesCore
-  - ExpoFileSystem (58.0.9):
+  - ExpoFileSystem (58.0.10):
     - ExpoModulesCore
   - ExpoFont (58.0.8):
     - ExpoModulesCore
+  - ExpoHaptics (58.0.7):
+    - ExpoModulesCore
+  - ExpoImage (58.0.15):
+    - ExpoModulesCore
+    - libavif/libdav1d
+    - SDWebImage (~> 5.21.0)
+    - SDWebImageAVIFCoder (~> 0.11.0)
+    - SDWebImageSVGCoder (~> 1.7.0)
+    - SDWebImageWebPCoder (~> 0.14.6)
   - ExpoImagePicker (58.0.10):
     - ExpoModulesCore
   - ExpoKeepAwake (58.0.3):
     - ExpoModulesCore
   - ExpoLogBox (58.0.12):
+    - React-Core
+  - ExpoMediaLibrary (58.0.11):
+    - ExpoModulesCore
     - React-Core
   - ExpoModulesCore (58.0.22):
     - ExpoModulesJSI
@@ -88,6 +102,8 @@ PODS:
     - ExpoModulesJSI
     - ExpoModulesWorklets
     - RNWorklets
+  - ExpoSQLite (58.0.13):
+    - ExpoModulesCore
   - ExpoVideo (58.0.11):
     - ExpoModulesCore
   - fast_float (8.0.0):
@@ -101,6 +117,23 @@ PODS:
   - hermes-engine (260318099.0.4):
     - hermes-engine/Pre-built (= 260318099.0.4)
   - hermes-engine/Pre-built (260318099.0.4)
+  - libavif/core (1.0.0)
+  - libavif/libdav1d (1.0.0):
+    - libavif/core
+    - libdav1d (>= 0.6.0)
+  - libdav1d (1.2.0)
+  - libwebp (1.5.0):
+    - libwebp/demux (= 1.5.0)
+    - libwebp/mux (= 1.5.0)
+    - libwebp/sharpyuv (= 1.5.0)
+    - libwebp/webp (= 1.5.0)
+  - libwebp/demux (1.5.0):
+    - libwebp/webp
+  - libwebp/mux (1.5.0):
+    - libwebp/demux
+  - libwebp/sharpyuv (1.5.0)
+  - libwebp/webp (1.5.0):
+    - libwebp/sharpyuv
   - RCT-Folly (2024.11.18.00):
     - RCT-Folly/Default (= 2024.11.18.00)
     - ReactNativeDependencies
@@ -2198,6 +2231,17 @@ PODS:
     - ReactCommon/turbomodule/core
     - ReactNativeDependencies
     - Yoga
+  - SDWebImage (5.21.7):
+    - SDWebImage/Core (= 5.21.7)
+  - SDWebImage/Core (5.21.7)
+  - SDWebImageAVIFCoder (0.11.1):
+    - libavif/core (>= 0.11.0)
+    - SDWebImage (~> 5.10)
+  - SDWebImageSVGCoder (1.7.0):
+    - SDWebImage/Core (~> 5.6)
+  - SDWebImageWebPCoder (0.14.6):
+    - libwebp (~> 1.0)
+    - SDWebImage/Core (~> 5.17)
   - SocketRocket (0.7.1):
     - ReactNativeDependencies
   - Yoga (0.0.0):
@@ -2211,21 +2255,26 @@ PODS:
 DEPENDENCIES:
   - boost (from `build/rndeps-facades/boost`)
   - DoubleConversion (from `build/rndeps-facades/DoubleConversion`)
-  - EXConstants (from `../node_modules/expo/node_modules/expo-constants/ios`)
+  - EXConstants (from `../node_modules/expo-constants/ios`)
   - Expo (from `../node_modules/expo`)
-  - ExpoAsset (from `../node_modules/expo/node_modules/expo-asset/ios`)
+  - ExpoAsset (from `../node_modules/expo-asset/ios`)
+  - ExpoBlur (from `../node_modules/expo-blur/ios`)
   - ExpoCamera (from `../node_modules/expo-camera/ios`)
   - ExpoCameraBarcodeScanning (from `../node_modules/expo-camera/ios`)
   - "ExpoDomWebView (from `../node_modules/expo/node_modules/@expo/dom-webview/ios`)"
-  - ExpoFileSystem (from `../node_modules/expo/node_modules/expo-file-system/ios`)
+  - ExpoFileSystem (from `../node_modules/expo-file-system/ios`)
   - ExpoFont (from `../node_modules/expo/node_modules/expo-font/ios`)
+  - ExpoHaptics (from `../node_modules/expo-haptics/ios`)
+  - ExpoImage (from `../node_modules/expo-image/ios`)
   - ExpoImagePicker (from `../node_modules/expo-image-picker/ios`)
   - ExpoKeepAwake (from `../node_modules/expo/node_modules/expo-keep-awake/ios`)
   - "ExpoLogBox (from `../node_modules/expo/node_modules/@expo/log-box`)"
+  - ExpoMediaLibrary (from `../node_modules/expo-media-library/ios`)
   - ExpoModulesCore (from `../node_modules/expo-modules-core`)
   - ExpoModulesJSI (from `../node_modules/expo-modules-jsi/apple`)
   - ExpoModulesWorklets (from `../node_modules/expo-modules-core`)
   - ExpoModulesWorkletsAdapter (from `../node_modules/expo-modules-core`)
+  - ExpoSQLite (from `../node_modules/expo-sqlite/ios`)
   - ExpoVideo (from `../node_modules/expo-video/ios`)
   - fast_float (from `build/rndeps-facades/fast_float`)
   - FBLazyVector (from `build/rncore-facades/FBLazyVector`)
@@ -2321,6 +2370,13 @@ DEPENDENCIES:
 
 SPEC REPOS:
   trunk:
+    - libavif
+    - libdav1d
+    - libwebp
+    - SDWebImage
+    - SDWebImageAVIFCoder
+    - SDWebImageSVGCoder
+    - SDWebImageWebPCoder
     - ZXingObjC
 
 EXTERNAL SOURCES:
@@ -2329,11 +2385,13 @@ EXTERNAL SOURCES:
   DoubleConversion:
     :path: build/rndeps-facades/DoubleConversion
   EXConstants:
-    :path: "../node_modules/expo/node_modules/expo-constants/ios"
+    :path: "../node_modules/expo-constants/ios"
   Expo:
     :path: "../node_modules/expo"
   ExpoAsset:
-    :path: "../node_modules/expo/node_modules/expo-asset/ios"
+    :path: "../node_modules/expo-asset/ios"
+  ExpoBlur:
+    :path: "../node_modules/expo-blur/ios"
   ExpoCamera:
     :path: "../node_modules/expo-camera/ios"
   ExpoCameraBarcodeScanning:
@@ -2341,15 +2399,21 @@ EXTERNAL SOURCES:
   ExpoDomWebView:
     :path: "../node_modules/expo/node_modules/@expo/dom-webview/ios"
   ExpoFileSystem:
-    :path: "../node_modules/expo/node_modules/expo-file-system/ios"
+    :path: "../node_modules/expo-file-system/ios"
   ExpoFont:
     :path: "../node_modules/expo/node_modules/expo-font/ios"
+  ExpoHaptics:
+    :path: "../node_modules/expo-haptics/ios"
+  ExpoImage:
+    :path: "../node_modules/expo-image/ios"
   ExpoImagePicker:
     :path: "../node_modules/expo-image-picker/ios"
   ExpoKeepAwake:
     :path: "../node_modules/expo/node_modules/expo-keep-awake/ios"
   ExpoLogBox:
     :path: "../node_modules/expo/node_modules/@expo/log-box"
+  ExpoMediaLibrary:
+    :path: "../node_modules/expo-media-library/ios"
   ExpoModulesCore:
     :path: "../node_modules/expo-modules-core"
   ExpoModulesJSI:
@@ -2358,6 +2422,8 @@ EXTERNAL SOURCES:
     :path: "../node_modules/expo-modules-core"
   ExpoModulesWorkletsAdapter:
     :path: "../node_modules/expo-modules-core"
+  ExpoSQLite:
+    :path: "../node_modules/expo-sqlite/ios"
   ExpoVideo:
     :path: "../node_modules/expo-video/ios"
   fast_float:
@@ -2547,25 +2613,33 @@ SPEC CHECKSUMS:
   DoubleConversion: e85e4faac763226bfd1cc4c6a98d8355149b27a5
   EXConstants: 8d855ca919f1ff90af258a07e9d5c2135b5bdc7c
   Expo: 4fa2e737c5ee604ad71851aa0a3129076811d844
-  ExpoAsset: eb6a76a47d910a3386622d8df6be48ff991d63ec
+  ExpoAsset: f930b122529db9160ab42bff03dc1f0ea8d63a93
+  ExpoBlur: 34ca6d967bd367ec108c5178aeb3111555273100
   ExpoCamera: 1d919eb4219a3a3e7acb28cafc6e641acbf501b5
   ExpoCameraBarcodeScanning: c443f05e519b27e058548f02ea9ed4517bd15436
   ExpoDomWebView: 0d5f78af2d77c988ed5032ec33c0729d3f27936d
-  ExpoFileSystem: 30f81802fb5d32e4e3bae888379adac5bc0ea676
+  ExpoFileSystem: 3870691dbd28a7b37f48bd59fb3706862ded2de4
   ExpoFont: 4718e530d21b883ab9e2e7cdac354e83f162a299
+  ExpoHaptics: 3c465172181250c604b7ebf6d5dc56811e71f7ad
+  ExpoImage: 72a0ba35c49201b82ee95fce85249afece6c608b
   ExpoImagePicker: c2d88de532d2643e34647bc93a0f10da350f2e4f
   ExpoKeepAwake: 4b1d72985be0a6762469631fb767160859ce4284
   ExpoLogBox: 2300905d143a11a7a7d2110dbc7c1f074ca297c9
+  ExpoMediaLibrary: 7a1ec82b97057a47cd025ae154a39f85548dafc6
   ExpoModulesCore: b488fecfef62ddc399d927ab91783e877c4c56b4
   ExpoModulesJSI: c9c0f51a8d697acd389d9d62e7607e37433b5c1a
   ExpoModulesWorklets: 732571d0eb77490afb453b46c2a7cb1a73dff592
   ExpoModulesWorkletsAdapter: f1aeab5ed662bc146ab33738326e56833fe1f39e
+  ExpoSQLite: 350a682034268e7da66e205a0b50bb2a3a9cc281
   ExpoVideo: 9bf1792d7509e90617e513770786df786b902f27
   fast_float: 908e5ee35999f3d91af4b962ac951acac591866c
   FBLazyVector: 953381a667ad5f4119b929026e53c4f3aa0da7e7
   fmt: c7776a2a4b1d7ce88b809a1e4d1f7add0f2369df
   glog: b4427c3119645da795ff09985ba9da909c940c96
   hermes-engine: a1158910bb7e300b9e3d2f1e2d433f817ec1a4b5
+  libavif: 5f8e715bea24debec477006f21ef9e95432e254d
+  libdav1d: 23581a4d8ec811ff171ed5e2e05cd27bad64c39f
+  libwebp: 02b23773aedb6ff1fd38cec7a77b81414c6842a8
   RCT-Folly: d173e541eeb78cad5c81011c1bbf62d5b86b9778
   RCTDeprecation: b5015bad0dc536eff092b252e8cdcf7903448e03
   RCTRequired: 1f568a6519677ef482387250f5a098a9ec5dba57
@@ -2649,6 +2723,10 @@ SPEC CHECKSUMS:
   RNScreens: a56a0eca6efd7175da435cdef59aa45bfeb244ed
   RNSVG: ff258e92ebf710458755537fb151a47973dfbad9
   RNWorklets: ec2adca24e3ce8d80b14b976cfe7b8d22b9d7682
+  SDWebImage: e9fc87c1aab89a8ab1bbd74eba378c6f53be8abf
+  SDWebImageAVIFCoder: afe194a084e851f70228e4be35ef651df0fc5c57
+  SDWebImageSVGCoder: 15a300a97ec1c8ac958f009c02220ac0402e936c
+  SDWebImageWebPCoder: e38c0a70396191361d60c092933e22c20d5b1380
   SocketRocket: d57b1af80c029e12a75cd9b218287c67381e4593
   Yoga: 58b502c52b14ad3c4468805d461fc37d275c2a42
   ZXingObjC: 8898711ab495761b2dbbdec76d90164a6d7e14c5

@@ -20,7 +20,7 @@ director applies by editing a declarative `timeline.tsx`. A WebGL compositor red
 the phone holds the preview and renders live with Skia, and a bridge server on the laptop runs
 Claude Code (Agent SDK). Claude edits files in a per-project workspace, the bridge parses them
 into a JSON model, and the phone hot-swaps it. The POC covers only talking-head videos, starts on
-iOS, and stops at live preview (no export yet).
+iOS, and ends with export to Photos (see **Export** below).
 
 ## Decisions
 - **Kit:** Cardboard's **Simple UGC** recipe, vendored at `cardboard-bridge/kits/simple-ugc/`:
@@ -195,8 +195,20 @@ bridge as diagnostics so the agent can fix them.
 ✅ "Warm cinematic grade" applies live, and a deliberately broken shader shows up as a diagnostic
 that the agent then fixes.
 
+**Export.** ✅ **DONE (2026-10-20).** Hybrid render, so the MP4 matches the preview:
+- Phone: `renderCaptionFrames` (`components/compositor/captionFrames.ts`) re-runs the preview's
+  bake and rasterises each distinct caption frame to a transparent full-frame PNG offscreen.
+  `useExportViewModel` uploads them with an `ExportManifest` (`POST /projects/:id/export`), follows
+  `job` events (`name: 'export'`, `progress`), downloads the MP4 and adds it to Photos (add-only).
+- Bridge (`src/export.ts`): ffmpeg composites the committed rev's video-track clips (trim, cover +
+  transform, opacity, hold-last-frame, volume) and each caption layer (an ffconcat image sequence)
+  in timeline z-order, 1080×1920 @ 30 fps, H.264/AAC. One export per project at a time; only the
+  latest is kept under `.bridge/exports/`. Refused (409) for drafts, a running turn or a stale rev.
+*Known limits:* exports what the preview draws, so audio-track (music bed), `<image>` and
+`<shader>` elements are not exported yet; one font per kit.
+
 **Later:** Android parity, on-device MP4 export (offscreen Skia → AVAssetWriter/MediaCodec,
-sharing the compositor), subject-matte effects, other recipes (the Talking-head recipes add
+sharing the compositor) to drop the bridge render, subject-matte effects, other recipes (the Talking-head recipes add
 `structure.json` + panel templates).
 
 ## Risks to watch

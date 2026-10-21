@@ -2,6 +2,7 @@ import React from 'react';
 import {
   KeyboardAvoidingView,
   Platform,
+  Pressable,
   ScrollView,
   StyleSheet,
   Text,
@@ -9,10 +10,18 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import {BlurView} from 'expo-blur';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {QrScanner} from '../../components/QrScanner';
-import {colors, spacing} from '../../theme';
+import {SwipeDismissSheet} from '../../components/SwipeDismissSheet';
+import {colors, radius, spacing} from '../../theme';
 import {usePairingScreenController} from './usePairingScreenController';
+
+/** Minimum gap between the status bar and the top of the sheet. */
+const SHEET_TOP_GAP = 24;
+
+/** expo-blur intensity (1–100) for the backdrop over the screen behind. */
+const BACKDROP_BLUR = 40;
 
 const STATUS_LABEL = {
   unpaired: 'Not paired',
@@ -34,94 +43,140 @@ export function PairingScreen() {
   const insets = useSafeAreaInsets();
 
   return (
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-      <ScrollView
-        contentContainerStyle={[
-          styles.content,
-          {paddingBottom: insets.bottom + spacing.xl},
-        ]}
-        keyboardShouldPersistTaps="handled">
-        <View style={styles.statusRow}>
-          <View
-            style={[styles.dot, {backgroundColor: STATUS_COLOR[c.status]}]}
-          />
-          <Text style={styles.statusLabel}>{STATUS_LABEL[c.status]}</Text>
-        </View>
-        {c.bridgeName ? (
-          <Text style={styles.muted}>
-            {c.bridgeName} · {c.bridgeUrl}
-          </Text>
-        ) : (
-          <Text style={styles.muted}>
-            Run `npm run dev` in cardboard-bridge on your laptop (same Wi-Fi).
-          </Text>
-        )}
-
-        {c.isScanning ? (
-          <View style={styles.section}>
-            <QrScanner onScan={c.onScan} active={!c.isChecking} />
-            <TouchableOpacity
-              style={styles.secondaryButton}
-              onPress={c.onStopScan}
-              accessibilityRole="button">
-              <Text style={styles.secondaryLabel}>Cancel</Text>
-            </TouchableOpacity>
-          </View>
-        ) : (
-          <TouchableOpacity
-            style={[styles.primaryButton, styles.section]}
-            onPress={c.onStartScan}
-            accessibilityRole="button">
-            <Text style={styles.primaryLabel}>
-              {c.bridgeName ? 'Re-pair: scan QR' : 'Scan pairing QR'}
+    // Same shape as the remix modal: blurred backdrop with a bottom sheet that
+    // sizes to its content and scrolls only once it runs out of room.
+    <BlurView
+      tint="dark"
+      intensity={BACKDROP_BLUR}
+      style={[styles.backdrop, {paddingTop: insets.top + SHEET_TOP_GAP}]}>
+      <Pressable
+        style={StyleSheet.absoluteFill}
+        onPress={c.onClose}
+        accessibilityRole="button"
+        accessibilityLabel="Close"
+      />
+      <KeyboardAvoidingView
+        style={styles.keyboardAvoider}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        <SwipeDismissSheet style={styles.sheet} onDismiss={c.onClose} enabled>
+          <ScrollView
+            style={styles.scroll}
+            contentContainerStyle={[
+              styles.content,
+              {paddingBottom: insets.bottom + spacing.lg},
+            ]}
+            keyboardShouldPersistTaps="handled">
+            <Text style={styles.heading}>Bridge</Text>
+            <Text style={styles.intro}>
+              Remixing and editing run on your laptop, where the Cardboard bridge
+              works with Claude. Pair once to connect this phone to it.
             </Text>
-          </TouchableOpacity>
-        )}
+            <View style={styles.statusRow}>
+              <View
+                style={[styles.dot, {backgroundColor: STATUS_COLOR[c.status]}]}
+              />
+              <Text style={styles.statusLabel}>{STATUS_LABEL[c.status]}</Text>
+            </View>
+            {c.bridgeName ? (
+              <Text style={styles.muted}>
+                {c.bridgeName} · {c.bridgeUrl}
+              </Text>
+            ) : (
+              <Text style={styles.muted}>
+                Run `npm run dev` in cardboard-bridge on your laptop (same
+                Wi-Fi).
+              </Text>
+            )}
 
-        <Text style={styles.label}>Or paste the pairing code</Text>
-        <TextInput
-          style={styles.input}
-          value={c.code}
-          onChangeText={c.onChangeCode}
-          placeholder='{"v":…,"url":"http://…","token":"…"}'
-          placeholderTextColor={colors.textMuted}
-          autoCapitalize="none"
-          autoCorrect={false}
-          multiline
-        />
-        <TouchableOpacity
-          style={[
-            styles.primaryButton,
-            (c.code.trim() === '' || c.isChecking) && styles.disabled,
-          ]}
-          onPress={c.onSubmitCode}
-          disabled={c.code.trim() === '' || c.isChecking}
-          accessibilityRole="button">
-          <Text style={styles.primaryLabel}>
-            {c.isChecking ? 'Checking…' : 'Connect'}
-          </Text>
-        </TouchableOpacity>
+            {c.isScanning ? (
+              <View style={styles.section}>
+                <QrScanner onScan={c.onScan} active={!c.isChecking} />
+                <TouchableOpacity
+                  style={styles.secondaryButton}
+                  onPress={c.onStopScan}
+                  accessibilityRole="button">
+                  <Text style={styles.secondaryLabel}>Cancel</Text>
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <TouchableOpacity
+                style={[styles.primaryButton, styles.section]}
+                onPress={c.onStartScan}
+                accessibilityRole="button">
+                <Text style={styles.primaryLabel}>
+                  {c.bridgeName ? 'Re-pair: scan QR' : 'Scan pairing QR'}
+                </Text>
+              </TouchableOpacity>
+            )}
 
-        {c.error ? <Text style={styles.error}>{c.error}</Text> : null}
+            <Text style={styles.label}>Or paste the pairing code</Text>
+            <TextInput
+              style={styles.input}
+              value={c.code}
+              onChangeText={c.onChangeCode}
+              placeholder='{"v":…,"url":"http://…","token":"…"}'
+              placeholderTextColor={colors.textMuted}
+              autoCapitalize="none"
+              autoCorrect={false}
+              multiline
+            />
+            <TouchableOpacity
+              style={[
+                styles.primaryButton,
+                (c.code.trim() === '' || c.isChecking) && styles.disabled,
+              ]}
+              onPress={c.onSubmitCode}
+              disabled={c.code.trim() === '' || c.isChecking}
+              accessibilityRole="button">
+              <Text style={styles.primaryLabel}>
+                {c.isChecking ? 'Checking…' : 'Connect'}
+              </Text>
+            </TouchableOpacity>
 
-        {c.bridgeName ? (
-          <TouchableOpacity
-            style={styles.secondaryButton}
-            onPress={c.onUnpair}
-            accessibilityRole="button">
-            <Text style={styles.secondaryLabel}>Forget bridge</Text>
-          </TouchableOpacity>
-        ) : null}
-      </ScrollView>
-    </KeyboardAvoidingView>
+            {c.error ? <Text style={styles.error}>{c.error}</Text> : null}
+
+            {c.bridgeName ? (
+              <TouchableOpacity
+                style={styles.secondaryButton}
+                onPress={c.onUnpair}
+                accessibilityRole="button">
+                <Text style={styles.secondaryLabel}>Forget bridge</Text>
+              </TouchableOpacity>
+            ) : null}
+          </ScrollView>
+        </SwipeDismissSheet>
+      </KeyboardAvoidingView>
+    </BlurView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {flex: 1, backgroundColor: colors.background},
-  content: {padding: spacing.lg},
+  backdrop: {flex: 1, justifyContent: 'flex-end'},
+  keyboardAvoider: {flexShrink: 1},
+  sheet: {
+    flexShrink: 1,
+    backgroundColor: colors.background,
+    borderTopLeftRadius: radius.sheet,
+    borderTopRightRadius: radius.sheet,
+  },
+  // flexGrow 0: size to the content instead of filling the screen.
+  scroll: {flexGrow: 0},
+  // The grab handle above supplies the rest of the top gap.
+  content: {padding: spacing.lg, paddingTop: spacing.md},
+  heading: {
+    color: colors.text,
+    fontSize: 20,
+    fontWeight: '700',
+    textAlign: 'center',
+    marginBottom: spacing.sm,
+  },
+  intro: {
+    color: colors.textMuted,
+    fontSize: 14,
+    lineHeight: 20,
+    textAlign: 'center',
+    marginBottom: spacing.lg,
+  },
   statusRow: {flexDirection: 'row', alignItems: 'center'},
   dot: {width: 10, height: 10, borderRadius: 5, marginRight: spacing.sm},
   statusLabel: {color: colors.text, fontSize: 18, fontWeight: '700'},

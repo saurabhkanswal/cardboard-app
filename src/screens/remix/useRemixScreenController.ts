@@ -1,5 +1,5 @@
-import {useCallback, useState} from 'react';
-import {Alert} from 'react-native';
+import {useCallback, useEffect, useState} from 'react';
+import {Alert, Keyboard, Platform} from 'react-native';
 import {
   StackActions,
   useNavigation,
@@ -7,8 +7,10 @@ import {
   type RouteProp,
 } from '@react-navigation/native';
 import {useRemixViewModel} from '../../viewmodel/remix/useRemixViewModel';
-import {canRemix} from '../../viewmodel/remix/remixRules';
-import type {PickedMedia} from '../../viewmodel/remix/types';
+import type {PickedMedia, RecipeField} from '../../viewmodel/remix/types';
+
+/** Focus key for the free-text prompt, alongside recipe field ids. */
+const PROMPT_INPUT = 'prompt';
 
 /**
  * This screen's own route contract. Declared locally (as a `type`, so it satisfies
@@ -16,24 +18,57 @@ import type {PickedMedia} from '../../viewmodel/remix/types';
  * boundaries forbid `screens/ → app/`.
  */
 type RemixParamList = {
-  Remix: {videoId: string; sectionId: string; uri: string};
+  Remix: {videoId: string; sectionId: string; uri: string; recipeId?: string};
 };
 
 export interface RemixScreenController {
   /** The tapped video to remix. */
   videoUri: string;
+  /** Heading + hint over the video picker, from the recipe. */
+  mediaPrompt: string;
+  mediaHint: string;
+  /** The recipe's text inputs, in order. */
+  fields: RecipeField[];
+  fieldValues: Record<string, string>;
+  onChangeField: (id: string, text: string) => void;
+  /**
+   * Whether an input (a field id, or `'prompt'`) is shown. While one is focused only it
+   * stays, so the sheet fits above the keyboard. Driven by focus, not keyboard events:
+   * those can arrive before `onFocus` and would unmount the input being tapped.
+   */
+  isInputShown: (id: string) => boolean;
+  onFocusInput: (id: string) => void;
+  onBlurInput: () => void;
+  /** An input is focused: hide the media picker and labels. */
+  isCompact: boolean;
+  promptInputId: string;
   prompt: string;
   onChangePrompt: (text: string) => void;
-  media: PickedMedia | null;
+  /** Picked clips, in upload order. */
+  media: PickedMedia[];
   onPickMedia: () => void;
-  clearMedia: () => void;
+  onRemoveMedia: (uri: string) => void;
+  /** False once the clip limit is reached: hide the add button. */
+  canAddMore: boolean;
+  /** e.g. `2 / 5`; empty while nothing is picked. */
+  clipCountLabel: string;
   isPicking: boolean;
-  /** True once both media and a non-empty prompt are present. */
+  /** True once a clip and every required field are present (the prompt is optional). */
   canRemix: boolean;
   /** True while the footage uploads to the bridge. */
   isUploading: boolean;
   onRemix: () => void;
   onClose: () => void;
+  /** Tap outside the sheet: dismisses the keyboard if an input is focused, else closes. */
+  onBackdropPress: () => void;
+  /** Tap on the sheet's empty space: dismisses the keyboard. */
+  onDismissKeyboard: () => void;
+  isKeyboardVisible: boolean;
+  /**
+   * Space the view must reserve under its content for the keyboard: its height
+   * on iOS, 0 on Android (`adjustResize` already shrinks the window).
+   */
+  keyboardInset: number;
 }
 
 /**
@@ -45,11 +80,48 @@ export interface RemixScreenController {
 export function useRemixScreenController(): RemixScreenController {
   const navigation = useNavigation();
   const route = useRoute<RouteProp<RemixParamList, 'Remix'>>();
-  const {uri} = route.params;
+  const {uri, recipeId} = route.params;
 
-  const {media, pickMedia, clearMedia, isPicking, remix, isUploading} =
-    useRemixViewModel();
+  const {
+    media,
+    maxClips,
+    pickMedia,
+    removeMedia,
+    isPicking,
+    recipe,
+    canRemix,
+    remix,
+    isUploading,
+  } = useRemixViewModel(recipeId);
   const [prompt, setPrompt] = useState('');
+  const [fieldValues, setFieldValues] = useState<Record<string, string>>({});
+  const [focusedInput, setFocusedInput] = useState<string | null>(null);
+  // null while hidden, else the keyboard height.
+  const [keyboardHeight, setKeyboardHeight] = useState<number | null>(null);
+
+  useEffect(() => {
+    // Android only emits the `did` events.
+    const isIOS = Platform.OS === 'ios';
+    const show = Keyboard.addListener(
+      isIOS ? 'keyboardWillShow' : 'keyboardDidShow',
+      e => setKeyboardHeight(e.endCoordinates.height),
+    );
+    const hide = Keyboard.addListener(
+      isIOS ? 'keyboardWillHide' : 'keyboardDidHide',
+      () => {
+        setKeyboardHeight(null);
+        // Android's back button hides the keyboard without blurring; blur so the
+        // full sheet returns and the next tap fires `onFocus` again.
+        if (!isIOS) {
+          Keyboard.dismiss();
+        }
+      },
+    );
+    return () => {
+      show.remove();
+      hide.remove();
+    };
+  }, []);
 
   const onPickMedia = useCallback(async () => {
     const result = await pickMedia();
@@ -61,8 +133,19 @@ export function useRemixScreenController(): RemixScreenController {
     }
   }, [pickMedia]);
 
+  const onChangeField = useCallback((id: string, text: string) => {
+    setFieldValues(prev => ({...prev, [id]: text}));
+  }, []);
+
+  const isKeyboardVisible = keyboardHeight !== null;
+  const isInputShown = useCallback(
+    (id: string) => focusedInput === null || focusedInput === id,
+    [focusedInput],
+  );
+  const onBlurInput = useCallback(() => setFocusedInput(null), []);
+
   const onRemix = useCallback(async () => {
-    const result = await remix({prompt, media});
+    const result = await remix({prompt, media, fields: fieldValues});
     switch (result.kind) {
       case 'created':
         // The editor takes over from the remix modal.
@@ -86,21 +169,40 @@ export function useRemixScreenController(): RemixScreenController {
       case 'invalid':
         break;
     }
-  }, [remix, prompt, media, navigation]);
+  }, [remix, prompt, media, fieldValues, navigation]);
 
   const onClose = useCallback(() => navigation.goBack(), [navigation]);
+  const isCompact = focusedInput !== null;
+  const onDismissKeyboard = useCallback(() => Keyboard.dismiss(), []);
+  const onBackdropPress = isCompact ? onDismissKeyboard : onClose;
 
   return {
     videoUri: uri,
+    mediaPrompt: recipe?.mediaPrompt ?? 'Add your video',
+    mediaHint: recipe?.mediaHint ?? '',
+    fields: recipe?.fields ?? [],
+    fieldValues,
+    onChangeField,
+    isInputShown,
+    onFocusInput: setFocusedInput,
+    onBlurInput,
+    isCompact,
+    promptInputId: PROMPT_INPUT,
     prompt,
     onChangePrompt: setPrompt,
     media,
     onPickMedia,
-    clearMedia,
+    onRemoveMedia: removeMedia,
+    canAddMore: media.length < maxClips,
+    clipCountLabel: media.length > 0 ? `${media.length} / ${maxClips}` : '',
     isPicking,
-    canRemix: canRemix({prompt, media}) && !isUploading,
+    canRemix: canRemix({prompt, media, fields: fieldValues}) && !isUploading,
     isUploading,
     onRemix,
     onClose,
+    onBackdropPress,
+    onDismissKeyboard,
+    isKeyboardVisible,
+    keyboardInset: Platform.OS === 'ios' ? keyboardHeight ?? 0 : 0,
   };
 }

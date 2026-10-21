@@ -1,15 +1,25 @@
-import {Skia, type SkFont, type SkPicture, type SkTypeface} from '@shopify/react-native-skia';
+import {
+  BlurStyle,
+  Skia,
+  type SkFont,
+  type SkPaint,
+  type SkPicture,
+  type SkRuntimeEffect,
+  type SkTypeface,
+} from '@shopify/react-native-skia';
 import type {SceneCode, SceneGraphicChild, SceneGraphicNode} from './scene';
 
 /**
  * Lays out and draws what a `<code>` template returns, for the CSS subset kit templates use:
- * - boxes: `width`/`height`, margins, `position: absolute` + `left`/`top` (relative to the
- *   parent box), `transform: translateX()/translateY()/translate()`, `opacity`;
+ * - boxes: `width`/`height`, margins, `position: absolute` + `left`/`top`/`right`/`bottom`
+ *   (relative to the parent box), `transform: translateX()/translateY()/translate()`, `opacity`;
  * - `display: flex` rows (no wrapping): `justifyContent` flex-start | center | flex-end |
  *   space-between, `alignItems` baseline | center | flex-start | flex-end;
- * - text on one line, with the inherited `fontSize`, `color`, `letterSpacing` and
- *   `lineHeight`, in the kit's font. `<span>`s flow inline; other boxes stack vertically.
- * Anything else is ignored. Lengths are numbers or `px` strings, as in React styles.
+ * - text on one line, with the inherited `fontSize`, `color`, `letterSpacing`, `lineHeight` and
+ *   `textShadow`, in the kit's font. `<span>`s flow inline; other boxes stack vertically;
+ * - dotted text: `backgroundClip: 'text'` with a `radial-gradient(circle, <color> a%,
+ *   transparent b%)` image tiled by `backgroundSize` (a dot-matrix fill).
+ * Anything else is ignored. Lengths are numbers, `px` strings, or `%` of the parent box.
  */
 
 /** One run of text, positioned in frame pixels. Plain data, so frames can be compared. */
@@ -22,6 +32,23 @@ export interface TextRun {
   spacing: number;
   color: string;
   opacity: number;
+  /** Dot-matrix fill instead of `color`. */
+  dots?: DotFill;
+  shadow?: TextShadow;
+}
+
+/** A grid of round dots, `cell` px apart, painted in `color`. */
+export interface DotFill {
+  color: string;
+  cell: number;
+  radius: number;
+}
+
+export interface TextShadow {
+  dx: number;
+  dy: number;
+  blur: number;
+  color: string;
 }
 
 export interface Measurer {
@@ -37,6 +64,14 @@ interface Inherited {
   /** Unitless multiplier (number) or a CSS length. */
   lineHeight: unknown;
   opacity: number;
+  dots?: DotFill;
+  shadow?: TextShadow;
+}
+
+/** The containing block that `%` lengths resolve against. */
+interface Box {
+  width?: number;
+  height?: number;
 }
 
 /** A laid-out box: its size, baseline from its top, and how to emit its text at a position. */
@@ -84,6 +119,48 @@ function px(value: unknown): number | undefined {
   return undefined;
 }
 
+/** `px`, plus `%` of `basis` (a parent box side) when it's known. */
+function len(value: unknown, basis: number | undefined): number | undefined {
+  if (typeof value === 'string' && basis !== undefined) {
+    const pct = /^(-?[\d.]+)%$/.exec(value.trim());
+    if (pct) {
+      return (parseFloat(pct[1]) / 100) * basis;
+    }
+  }
+  return px(value);
+}
+
+/** `radial-gradient(circle, <color> a%, transparent b%)` tiled by `backgroundSize: 'Npx …'`. */
+function dotsOf(style: Style): DotFill | undefined {
+  const clip = style.backgroundClip ?? style.WebkitBackgroundClip;
+  if (clip !== 'text' || typeof style.backgroundImage !== 'string') {
+    return undefined;
+  }
+  const g = /radial-gradient\(\s*circle\s*,\s*([^\s,]+)\s+([\d.]+)%\s*,\s*transparent\s+([\d.]+)%\s*\)/.exec(
+    style.backgroundImage,
+  );
+  const cell = typeof style.backgroundSize === 'string' ? px(style.backgroundSize.trim().split(/\s+/)[0]) : undefined;
+  if (!g || !cell) {
+    return undefined;
+  }
+  // A `circle` gradient's 100% is the farthest corner: half the tile's diagonal. The dot's
+  // edge sits midway through the color→transparent transition.
+  const reach = (cell * Math.SQRT2) / 2;
+  return {color: g[1], cell, radius: (((parseFloat(g[2]) + parseFloat(g[3])) / 2) / 100) * reach};
+}
+
+/** `textShadow: '<x> <y> [blur] <color>'` (first shadow only). */
+function shadowOf(value: unknown): TextShadow | undefined {
+  if (typeof value !== 'string' || value === 'none') {
+    return undefined;
+  }
+  const parts = value.split(',')[0].trim().split(/\s+/);
+  const lengths = parts.map(px);
+  const color = parts.find((_, i) => lengths[i] === undefined);
+  const [dx, dy, blur = 0] = lengths.filter((n): n is number => n !== undefined);
+  return color && dx !== undefined && dy !== undefined ? {dx, dy, blur, color} : undefined;
+}
+
 function styleOf(node: SceneGraphicNode): Style {
   const style = node.props.style;
   return style && typeof style === 'object' ? (style as Style) : {};
@@ -97,6 +174,9 @@ function inherit(parent: Inherited, style: Style): Inherited {
     lineHeight: style.lineHeight ?? parent.lineHeight,
     // Not inherited in CSS, but for non-overlapping text a group's opacity is the same thing.
     opacity: parent.opacity * (typeof style.opacity === 'number' ? style.opacity : 1),
+    // A background clipped to text fills the text of the whole subtree.
+    dots: dotsOf(style) ?? parent.dots,
+    shadow: style.textShadow !== undefined ? shadowOf(style.textShadow) : parent.shadow,
   };
 }
 
@@ -168,6 +248,8 @@ function textItem(text: string, inh: Inherited, m: Measurer): Item {
         spacing: inh.letterSpacing,
         color: inh.color,
         opacity: inh.opacity,
+        ...(inh.dots && {dots: inh.dots}),
+        ...(inh.shadow && {shadow: inh.shadow}),
       }),
   };
 }
@@ -237,9 +319,13 @@ function stackLayout(items: Item[]): Content {
   };
 }
 
-function elementItem(node: SceneGraphicNode, parent: Inherited, m: Measurer): Item {
+function elementItem(node: SceneGraphicNode, parent: Inherited, m: Measurer, box: Box): Item {
   const style = styleOf(node);
   const inh = inherit(parent, style);
+  const fixedWidth = len(style.width, box.width);
+  const fixedHeight = len(style.height, box.height);
+  // In-flow children resolve `%` against this box when its size is fixed.
+  const own: Box = {width: fixedWidth, height: fixedHeight};
   const inFlow: Item[] = [];
   const absolute: SceneGraphicNode[] = [];
   let allInline = true;
@@ -250,12 +336,10 @@ function elementItem(node: SceneGraphicNode, parent: Inherited, m: Measurer): It
       absolute.push(child);
     } else {
       allInline = allInline && child.type === 'span';
-      inFlow.push(elementItem(child, inh, m));
+      inFlow.push(elementItem(child, inh, m, own));
     }
   }
 
-  const fixedWidth = px(style.width);
-  const fixedHeight = px(style.height);
   const content =
     style.display === 'flex' && (style.flexDirection ?? 'row') === 'row'
       ? rowLayout(inFlow, fixedWidth, fixedHeight, style.justifyContent, style.alignItems)
@@ -263,16 +347,18 @@ function elementItem(node: SceneGraphicNode, parent: Inherited, m: Measurer): It
         ? rowLayout(inFlow, fixedWidth, fixedHeight, 'flex-start', 'baseline')
         : stackLayout(inFlow);
   const [tx, ty] = translateOf(style.transform);
+  const width = fixedWidth ?? content.width;
+  const height = fixedHeight ?? content.height;
 
   return {
-    width: fixedWidth ?? content.width,
-    height: fixedHeight ?? content.height,
+    width,
+    height,
     baseline: content.baseline,
     margin: marginOf(style),
     place(x, y, out) {
       content.place(x + tx, y + ty, out);
       for (const child of absolute) {
-        placeAbsolute(child, inh, m, x + tx, y + ty, out);
+        placeAbsolute(child, inh, m, x + tx, y + ty, {width, height}, out);
       }
     },
   };
@@ -284,24 +370,61 @@ function placeAbsolute(
   m: Measurer,
   x: number,
   y: number,
+  box: Box,
   out: TextRun[],
 ) {
   const style = styleOf(node);
-  const item = elementItem(node, inh, m);
-  item.place(x + (px(style.left) ?? 0) + item.margin[3], y + (px(style.top) ?? 0) + item.margin[0], out);
+  const item = elementItem(node, inh, m, box);
+  const outerWidth = item.margin[3] + item.width + item.margin[1];
+  const outerHeight = item.margin[0] + item.height + item.margin[2];
+  const left = len(style.left, box.width);
+  const top = len(style.top, box.height);
+  const right = len(style.right, box.width);
+  const bottom = len(style.bottom, box.height);
+  const dx =
+    left ?? (right !== undefined && box.width !== undefined ? box.width - right - outerWidth : 0);
+  const dy =
+    top ?? (bottom !== undefined && box.height !== undefined ? box.height - bottom - outerHeight : 0);
+  item.place(x + dx + item.margin[3], y + dy + item.margin[0], out);
 }
 
 /** A template's output → positioned text runs (the root boxes start at the frame's corner). */
-export function layoutGraphic(tree: SceneGraphicChild, m: Measurer): TextRun[] {
+export function layoutGraphic(
+  tree: SceneGraphicChild,
+  m: Measurer,
+  frame: {width: number; height: number},
+): TextRun[] {
   const out: TextRun[] = [];
   for (const node of flatten([tree])) {
     if (typeof node === 'string') {
       textItem(node, ROOT, m).place(0, 0, out);
     } else {
-      placeAbsolute(node, ROOT, m, 0, 0, out);
+      placeAbsolute(node, ROOT, m, 0, 0, frame, out);
     }
   }
   return out;
+}
+
+/** Round dots on a `cell` grid, antialiased over one pixel. Premultiplied `color` uniform. */
+const DOTS_SKSL = `
+uniform float cell;
+uniform float radius;
+uniform half4 color;
+half4 main(float2 p) {
+  float2 q = mod(p, cell) - cell * 0.5;
+  return color * half(clamp(radius + 0.5 - length(q), 0.0, 1.0));
+}`;
+
+let dotsEffect: SkRuntimeEffect | null = null;
+
+function dotsPaint(paint: SkPaint, dots: DotFill) {
+  dotsEffect ??= Skia.RuntimeEffect.Make(DOTS_SKSL);
+  const [r, g, b, a] = Skia.Color(dots.color);
+  if (dotsEffect) {
+    paint.setShader(dotsEffect.makeShader([dots.cell, dots.radius, r * a, g * a, b * a, a]));
+  } else {
+    paint.setColor(Skia.Color(dots.color));
+  }
 }
 
 export function recordRuns(
@@ -311,8 +434,6 @@ export function recordRuns(
 ): SkPicture {
   const recorder = Skia.PictureRecorder();
   const canvas = recorder.beginRecording(Skia.XYWHRect(0, 0, frame.width, frame.height));
-  const paint = Skia.Paint();
-  paint.setAntiAlias(true);
   for (const run of runs) {
     if (run.opacity <= 0) {
       continue;
@@ -326,7 +447,24 @@ export function recordRuns(
       x += widths[i] + run.spacing;
       return at;
     });
-    paint.setColor(Skia.Color(run.color));
+    if (run.shadow) {
+      const shadow = Skia.Paint();
+      shadow.setAntiAlias(true);
+      shadow.setColor(Skia.Color(run.shadow.color));
+      shadow.setAlphaf(shadow.getAlphaf() * run.opacity);
+      if (run.shadow.blur > 0) {
+        // CSS blur radius ≈ 2σ.
+        shadow.setMaskFilter(Skia.MaskFilter.MakeBlur(BlurStyle.Normal, run.shadow.blur / 2, true));
+      }
+      canvas.drawGlyphs(glyphs, positions, run.x + run.shadow.dx, run.y + run.shadow.dy, font, shadow);
+    }
+    const paint = Skia.Paint();
+    paint.setAntiAlias(true);
+    if (run.dots) {
+      dotsPaint(paint, run.dots);
+    } else {
+      paint.setColor(Skia.Color(run.color));
+    }
     paint.setAlphaf(paint.getAlphaf() * run.opacity);
     canvas.drawGlyphs(glyphs, positions, run.x, run.y, font, paint);
   }
@@ -364,7 +502,7 @@ export function bakeGraphic(
     samples++;
     let runs: TextRun[] = [];
     try {
-      runs = layoutGraphic(code.graphic({time, width: frame.width, height: frame.height}), m);
+      runs = layoutGraphic(code.graphic({time, width: frame.width, height: frame.height}), m, frame);
     } catch (e) {
       if (__DEV__ && !warned) {
         warned = true;

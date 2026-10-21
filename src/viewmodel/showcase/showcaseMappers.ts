@@ -1,4 +1,4 @@
-import type {SectionDTO} from '../../model/showcase/types';
+import type {SectionDTO, VideoDTO} from '../../model/showcase/types';
 import type {Section, Video} from './types';
 
 /**
@@ -8,8 +8,8 @@ import type {Section, Video} from './types';
  * means backend shape changes are absorbed here rather than rippling into views.
  */
 
-function mapVideo(dto: {id: string; url: string}): Video {
-  return {id: dto.id, url: dto.url};
+function mapVideo(dto: VideoDTO): Video {
+  return {id: dto.id, url: dto.url, recipeId: dto.recipeId};
 }
 
 export function mapSection(dto: SectionDTO): Section {

@@ -6,6 +6,8 @@
 export interface Video {
   id: string;
   url: string;
+  /** Recipe (bridge kit) to remix this video with; absent → the default recipe. */
+  recipeId?: string;
 }
 
 export interface Section {

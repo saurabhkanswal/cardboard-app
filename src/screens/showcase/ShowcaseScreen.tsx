@@ -1,4 +1,4 @@
-import React, {useCallback} from 'react';
+import React, {useCallback, useLayoutEffect} from 'react';
 import {
   ActivityIndicator,
   FlatList,
@@ -8,13 +8,16 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import {useNavigation} from '@react-navigation/native';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
+import {ConnectAIButton} from '../../components/ConnectAIButton';
 import {HeroHeading, type HeroTerm} from '../../components/HeroHeading';
+import {ProjectTile} from '../../components/ProjectTile';
 import {SectionRail} from '../../components/SectionRail';
 import {type SegmentedTab, SegmentedTabs} from '../../components/SegmentedTabs';
-import type {Section} from '../../viewmodel/showcase/types';
 import {colors, spacing} from '../../theme';
 import {
+  type ShowcaseItem,
   type ShowcaseTab,
   useShowcaseScreenController,
 } from './useShowcaseScreenController';
@@ -38,7 +41,12 @@ export function ShowcaseScreen() {
   const {
     activeTab,
     setActiveTab,
-    sections,
+    items,
+    isProjectsEmpty,
+    projectTileWidth,
+    projectTileHeight,
+    projectGap,
+    onPressProject,
     isLoading,
     error,
     loadedIds,
@@ -49,28 +57,62 @@ export function ShowcaseScreen() {
     onSectionsViewableChanged,
     getViewabilityHandler,
     onPressVideo,
+    onPressConnect,
   } = useShowcaseScreenController();
   const insets = useSafeAreaInsets();
+  const navigation = useNavigation();
 
-  const renderSection: ListRenderItem<Section> = useCallback(
-    ({item}) => (
-      <SectionRail
-        sectionId={item.id}
-        title={item.title}
-        videos={item.videos}
-        loadedIds={loadedIds}
-        playingIds={playingIds}
-        onViewableItemsChanged={getViewabilityHandler(item.id)}
-        viewabilityConfig={viewabilityConfig}
-        onPressVideo={onPressVideo}
-      />
-    ),
+  // The header button lives here, not in navigation.tsx: `app/` may not import
+  // `components/`.
+  const renderConnectButton = useCallback(
+    () => <ConnectAIButton onPress={onPressConnect} />,
+    [onPressConnect],
+  );
+  useLayoutEffect(() => {
+    navigation.setOptions({headerRight: renderConnectButton});
+  }, [navigation, renderConnectButton]);
+
+  const renderItem: ListRenderItem<ShowcaseItem> = useCallback(
+    ({item}) =>
+      item.kind === 'rail' ? (
+        <SectionRail
+          sectionId={item.section.id}
+          title={item.section.title}
+          videos={item.section.videos}
+          loadedIds={loadedIds}
+          playingIds={playingIds}
+          onViewableItemsChanged={getViewabilityHandler(item.section.id)}
+          viewabilityConfig={viewabilityConfig}
+          onPressVideo={onPressVideo}
+        />
+      ) : (
+        <View style={[styles.projectRow, {gap: projectGap, marginBottom: projectGap}]}>
+          {item.row.projects.map(project => (
+            <ProjectTile
+              key={project.id}
+              id={project.id}
+              uri={project.uri}
+              dateLabel={project.dateLabel}
+              durationLabel={project.durationLabel}
+              width={projectTileWidth}
+              height={projectTileHeight}
+              shouldLoad={loadedIds.has(project.id)}
+              shouldPlay={playingIds.has(project.id)}
+              onPress={onPressProject}
+            />
+          ))}
+        </View>
+      ),
     [
       loadedIds,
       playingIds,
       getViewabilityHandler,
       viewabilityConfig,
       onPressVideo,
+      projectGap,
+      projectTileWidth,
+      projectTileHeight,
+      onPressProject,
     ],
   );
 
@@ -100,13 +142,13 @@ export function ShowcaseScreen() {
         paddingTop: spacing.xl + spacing.xl + spacing.lg,
         paddingBottom: insets.bottom + spacing.xl,
       }}
-      data={sections}
-      renderItem={renderSection}
-      keyExtractor={section => section.id}
+      data={items}
+      renderItem={renderItem}
+      keyExtractor={item => item.id}
       ListHeaderComponent={
         <>
           <HeroHeading
-            title="Viral reels, in minutes"
+            title={"Make viral reels,\nin minutes"}
             prefix="Built for"
             terms={HERO_TERMS}
           />
@@ -119,6 +161,16 @@ export function ShowcaseScreen() {
             />
           </View>
         </>
+      }
+      ListEmptyComponent={
+        isProjectsEmpty ? (
+          <View style={styles.empty}>
+            <Text style={styles.emptyTitle}>No projects yet</Text>
+            <Text style={styles.emptyText}>
+              Remix a recipe and export it — your videos will show up here.
+            </Text>
+          </View>
+        ) : undefined
       }
       onViewableItemsChanged={onSectionsViewableChanged}
       viewabilityConfig={sectionViewabilityConfig}
@@ -144,6 +196,19 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
     marginBottom: spacing.lg,
   },
+  projectRow: {
+    // Keep in sync with PROJECT_GUTTER in the controller (tile width is fitted to it).
+    flexDirection: 'row',
+    paddingHorizontal: spacing.lg,
+  },
+  empty: {
+    alignItems: 'center',
+    paddingHorizontal: spacing.xl,
+    paddingTop: spacing.xl,
+    gap: spacing.sm,
+  },
+  emptyTitle: {color: colors.text, fontSize: 17, fontWeight: '600'},
+  emptyText: {color: colors.textMuted, fontSize: 14, textAlign: 'center'},
   center: {
     alignItems: 'center',
     justifyContent: 'center',

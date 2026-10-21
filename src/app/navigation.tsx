@@ -4,6 +4,8 @@ import {ShowcaseScreen} from '../screens/showcase/ShowcaseScreen';
 import {RemixScreen} from '../screens/remix/RemixScreen';
 import {PairingScreen} from '../screens/pairing/PairingScreen';
 import {EditorScreen} from '../screens/editor/EditorScreen';
+import {OnboardingScreen} from '../screens/onboarding/OnboardingScreen';
+import {ProjectPlayerScreen} from '../screens/projectPlayer/ProjectPlayerScreen';
 import {colors} from '../theme';
 import Logotype from '../../assets/cardboard-logotype-white.svg';
 
@@ -19,10 +21,12 @@ const HeaderLogo = () => <Logotype width={LOGO_WIDTH} height={LOGO_HEIGHT} />;
 
 /** Route map for the root native stack. Extend as screens are added. */
 export type RootStackParamList = {
-  Showcase: undefined;
-  Remix: {videoId: string; sectionId: string; uri: string};
+  Onboarding: undefined;
+  Showcase: {tab?: 'recipes' | 'projects'} | undefined;
+  Remix: {videoId: string; sectionId: string; uri: string; recipeId?: string};
   Pairing: undefined;
   Editor: {projectId: string};
+  ProjectPlayer: {id: string};
 };
 
 /**
@@ -41,11 +45,20 @@ const Stack = createNativeStackNavigator<RootStackParamList>();
 export function RootNavigator() {
   return (
     <Stack.Navigator
+      // Onboarding shows on every launch for now. To show it only once again, use
+      // `hasSeenOnboarding() ? 'Showcase' : 'Onboarding'` from model/onboarding.
+      initialRouteName="Onboarding"
       screenOptions={{
         headerStyle: {backgroundColor: colors.background},
         headerShadowVisible: false,
         headerTintColor: colors.text,
       }}>
+      <Stack.Screen
+        name="Onboarding"
+        component={OnboardingScreen}
+        // Left via navigation.reset, so there's no back gesture into it.
+        options={{headerShown: false, gestureEnabled: false}}
+      />
       <Stack.Screen
         name="Showcase"
         component={ShowcaseScreen}
@@ -54,17 +67,39 @@ export function RootNavigator() {
       <Stack.Screen
         name="Remix"
         component={RemixScreen}
-        options={{presentation: 'modal', headerTitle: 'Remix'}}
+        options={{
+          // RemixScreen draws its own backdrop and bottom sheet; the native
+          // formSheet's system background can't be styled.
+          presentation: 'transparentModal',
+          animation: 'slide_from_bottom',
+          headerShown: false,
+        }}
       />
       <Stack.Screen
         name="Editor"
         component={EditorScreen}
-        options={{headerTitle: 'Editor'}}
+        // EditorScreen draws its own header (Cancel · Editor · Export).
+        options={{headerShown: false}}
       />
       <Stack.Screen
         name="Pairing"
         component={PairingScreen}
-        options={{presentation: 'modal', headerTitle: 'Bridge'}}
+        options={{
+          // PairingScreen draws its own content-height bottom sheet (like Remix).
+          presentation: 'transparentModal',
+          animation: 'slide_from_bottom',
+          headerShown: false,
+        }}
+      />
+      <Stack.Screen
+        name="ProjectPlayer"
+        component={ProjectPlayerScreen}
+        // ProjectPlayerScreen draws its own header (Close · date · Delete).
+        options={{
+          presentation: 'fullScreenModal',
+          animation: 'slide_from_bottom',
+          headerShown: false,
+        }}
       />
     </Stack.Navigator>
   );

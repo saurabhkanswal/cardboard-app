@@ -6,6 +6,8 @@
 export interface VideoDTO {
   id: string;
   url: string;
+  /** The bridge kit this video's recipe remixes with, when the app supports it. */
+  recipeId?: string;
 }
 
 export interface SectionDTO {

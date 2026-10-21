@@ -52,7 +52,8 @@ const styles = StyleSheet.create({
   track: {
     height: 4,
     borderRadius: 2,
-    backgroundColor: colors.surface,
+    // Unplayed part; must contrast with the video card's `surface` behind it.
+    backgroundColor: colors.divider,
     overflow: 'hidden',
   },
   fill: {height: 4, backgroundColor: colors.accent},

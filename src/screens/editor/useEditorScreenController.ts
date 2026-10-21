@@ -1,10 +1,21 @@
-import {useCallback, useEffect, useState} from 'react';
-import {useRoute, type RouteProp} from '@react-navigation/native';
+import {useCallback, useEffect, useRef, useState} from 'react';
+import {Alert, Keyboard, Platform, useWindowDimensions, type FlatList} from 'react-native';
+import {
+  StackActions,
+  useNavigation,
+  usePreventRemove,
+  useRoute,
+  type RouteProp,
+} from '@react-navigation/native';
 import {useAnimatedReaction} from 'react-native-reanimated';
 import {scheduleOnRN} from 'react-native-worklets';
-import {EMPTY_STATS} from '../../components/compositor/playbackStats';
+import {renderCaptionFrames} from '../../components/compositor/captionFrames';
 import {usePlaybackClock} from '../../components/compositor/usePlaybackClock';
 import {useEditorViewModel} from '../../viewmodel/editor/useEditorViewModel';
+import {useExportViewModel} from '../../viewmodel/editor/useExportViewModel';
+import type {ChatMessage} from '../../viewmodel/editor/chat';
+import {isExportBusy, type ExportPhase} from '../../viewmodel/editor/exportRules';
+import {spacing} from '../../theme';
 
 /** Declared locally (a `type`, so it satisfies ParamListBase) — screens may not import app/. */
 type EditorParamList = {
@@ -19,6 +30,18 @@ const STATUS_LABEL = {
   error: 'Something went wrong',
 } as const;
 
+/** Export overlay label by phase; `rendering` shows the bridge's progress instead. */
+const EXPORT_LABEL: Partial<Record<ExportPhase, string>> = {
+  uploading: 'Uploading…',
+  saving: 'Saving…',
+};
+
+/** Share of the window height the preview may take, with the keyboard down / up. */
+const PREVIEW_SHARE = 0.35;
+const PREVIEW_SHARE_KEYBOARD = 0.22;
+/** Per side: the video card's margin + padding (see EditorScreen's `card`). */
+const CARD_INSET = spacing.md + spacing.sm;
+
 /** `m:ss.t`. */
 function formatTime(seconds: number): string {
   const s = Math.max(0, seconds);
@@ -27,18 +50,46 @@ function formatTime(seconds: number): string {
 }
 
 /**
- * Editor screen glue: transport (play/pause/scrub over the compositor's clock),
- * preview sizing, status lines and the dev measurement HUD.
+ * Editor screen glue: the chat composer (draft, send/stop/undo, keyboard), transport
+ * (play/pause/scrub over the compositor's clock), preview sizing and status.
  */
 export function useEditorScreenController() {
   const {projectId} = useRoute<RouteProp<EditorParamList, 'Editor'>>().params;
+  const navigation = useNavigation();
   const vm = useEditorViewModel(projectId);
   const duration = vm.timeline?.duration ?? 0;
+  const exporter = useExportViewModel(projectId, {
+    status: vm.status,
+    isDraft: vm.isDraft,
+    rev: vm.rev,
+    duration,
+  });
   const {clock, isPlaying, play, pause, seekTo} = usePlaybackClock(duration);
+  // Captions are rasterised on the phone before the upload starts.
+  const [isPreparingExport, setPreparingExport] = useState(false);
   const [playheadTenths, setPlayheadTenths] = useState(0);
-  const [statsLabel, setStatsLabel] = useState<string | null>(null);
-  const [bakeLabel, setBakeLabel] = useState<string | null>(null);
-  const [previewArea, setPreviewArea] = useState({width: 0, height: 0});
+  const [draft, setDraft] = useState('');
+  // null while hidden, else the keyboard height.
+  const [keyboardHeight, setKeyboardHeight] = useState<number | null>(null);
+  const listRef = useRef<FlatList<ChatMessage>>(null);
+  const window = useWindowDimensions();
+
+  useEffect(() => {
+    // Android only emits the `did` events.
+    const isIOS = Platform.OS === 'ios';
+    const show = Keyboard.addListener(
+      isIOS ? 'keyboardWillShow' : 'keyboardDidShow',
+      e => setKeyboardHeight(e.endCoordinates.height),
+    );
+    const hide = Keyboard.addListener(
+      isIOS ? 'keyboardWillHide' : 'keyboardDidHide',
+      () => setKeyboardHeight(null),
+    );
+    return () => {
+      show.remove();
+      hide.remove();
+    };
+  }, []);
 
   // Label refreshes at 10 Hz, not per frame. Only the number crosses threads:
   // formatting is plain JS and must not run on the UI runtime.
@@ -51,29 +102,6 @@ export function useEditorScreenController() {
     },
   );
 
-  useEffect(() => {
-    if (!__DEV__) {
-      return;
-    }
-    const id = setInterval(() => {
-      // Spread over defaults: Fast Refresh can keep a shared value from an older shape.
-      const s = {...EMPTY_STATS, ...clock.stats.value};
-      setStatsLabel(
-        `frames ${s.frames} · slow ${s.slowFrames} · worst ${s.worstFrameMs.toFixed(0)}ms · start ${s.startLatencyMs.toFixed(0)}ms · seeks ${s.playingSeeks}`,
-      );
-    }, 1000);
-    return () => clearInterval(id);
-  }, [clock.stats]);
-
-  const onCodeBaked = useCallback(
-    (s: {samples: number; frames: number; ms: number}) => {
-      if (__DEV__) {
-        setBakeLabel(`captions baked ${s.frames} frames from ${s.samples} samples in ${s.ms}ms`);
-      }
-    },
-    [],
-  );
-
   const onTogglePlay = useCallback(() => {
     if (isPlaying) {
       pause();
@@ -82,17 +110,107 @@ export function useEditorScreenController() {
     }
   }, [isPlaying, play, pause]);
 
-  // Largest box of the timeline's aspect that fits the preview area.
+  const {send} = vm;
+  const onSend = useCallback(() => {
+    if (!draft.trim()) {
+      return;
+    }
+    send(draft);
+    setDraft('');
+  }, [draft, send]);
+
+  const onCancel = useCallback(() => navigation.goBack(), [navigation]);
+
+  const {timeline} = vm;
+  const {exportVideo, acknowledge} = exporter;
+  const onExport = useCallback(async () => {
+    if (!timeline) {
+      return;
+    }
+    pause();
+    Keyboard.dismiss();
+    setPreparingExport(true);
+    try {
+      // Yield a frame so the "Preparing…" label shows before the JS-thread render.
+      await new Promise(resolve => requestAnimationFrame(resolve));
+      const layers = await renderCaptionFrames(timeline);
+      setPreparingExport(false);
+      await exportVideo(layers);
+    } catch (e) {
+      setPreparingExport(false);
+      Alert.alert("Couldn't export", e instanceof Error ? e.message : String(e));
+    }
+  }, [timeline, pause, exportVideo]);
+
+  const isExporting = isPreparingExport || isExportBusy(exporter.phase);
+  // The overlay blocks Cancel; this blocks the back swipe and Android's back button.
+  usePreventRemove(isExporting, () => {});
+
+  // Report the outcome once. A finished export lands on "Your projects".
+  useEffect(() => {
+    if (exporter.phase === 'saved') {
+      Alert.alert('Saved to Photos', 'Your video is in your photo library.');
+      acknowledge();
+      navigation.dispatch(StackActions.popTo('Showcase', {tab: 'projects'}));
+    } else if (exporter.phase === 'error') {
+      Alert.alert("Couldn't export", exporter.error ?? undefined);
+      acknowledge();
+    }
+  }, [exporter.phase, exporter.error, acknowledge, navigation]);
+
+  const onChatContentSizeChange = useCallback(() => {
+    listRef.current?.scrollToEnd({animated: true});
+  }, []);
+
+  // Largest box of the timeline's aspect within a capped share of the window, so the
+  // chat keeps most of the screen (and more of it while typing).
+  const isKeyboardVisible = keyboardHeight !== null;
   const aspect = vm.timeline ? vm.timeline.width / vm.timeline.height : 9 / 16;
-  const previewWidth = Math.floor(Math.min(previewArea.width, previewArea.height * aspect));
+  const previewHeight = Math.floor(
+    window.height * (isKeyboardVisible ? PREVIEW_SHARE_KEYBOARD : PREVIEW_SHARE),
+  );
+  const previewWidth = Math.floor(Math.min(window.width - 2 * CARD_INSET, previewHeight * aspect));
+  const isBusy =
+    vm.status === 'transcribing' || vm.status === 'agent-running' || vm.status === 'connecting';
 
   return {
+    onCancel,
+    onExport,
+    canExport: exporter.canExport && !isExporting,
+    isExporting,
+    exportOverlayLabel: isPreparingExport
+      ? 'Preparing…'
+      : EXPORT_LABEL[exporter.phase] ??
+        `Exporting ${Math.round(exporter.progress * 100)}%`,
+    exportProgress: exporter.phase === 'rendering' ? exporter.progress : null,
     timeline: vm.timeline,
-    statusLabel: vm.error ?? vm.activity ?? STATUS_LABEL[vm.status],
-    isBusy:
-      vm.status === 'transcribing' || vm.status === 'agent-running' || vm.status === 'connecting',
+    // While editing, the chat's latest step already shows the agent's activity.
+    statusLabel:
+      vm.error ??
+      (vm.status === 'agent-running' ? STATUS_LABEL[vm.status] : vm.activity) ??
+      STATUS_LABEL[vm.status],
+    isBusy,
     isError: vm.status === 'error',
-    revLabel: `rev ${vm.rev}${vm.isDraft ? ' · live draft' : ''}${vm.errorCount ? ` · ${vm.errorCount} error(s)` : ''}`,
+    // Chat
+    messages: vm.messages,
+    listRef,
+    onChatContentSizeChange,
+    draft,
+    onChangeDraft: setDraft,
+    composerPlaceholder:
+      vm.status === 'agent-running'
+        ? 'Editing… tap stop to cancel'
+        : vm.status === 'ready'
+          ? 'Tell the director what to change…'
+          : STATUS_LABEL[vm.status],
+    canEdit: vm.status === 'ready',
+    isRunning: vm.canStop,
+    canSend: vm.canSend && draft.trim().length > 0,
+    onSend,
+    onStop: vm.stop,
+    onUndo: vm.canUndo ? vm.undo : undefined,
+    /** iOS: room to leave for the keyboard; Android's adjustResize already shrinks the window. */
+    keyboardInset: Platform.OS === 'ios' ? keyboardHeight ?? 0 : 0,
     templateError: vm.templateError,
     clock,
     isPlaying,
@@ -102,9 +220,7 @@ export function useEditorScreenController() {
     timeLabel: formatTime(playheadTenths / 10),
     durationLabel: formatTime(duration),
     duration,
-    statsLabel: statsLabel && bakeLabel ? `${statsLabel}\n${bakeLabel}` : statsLabel ?? bakeLabel,
-    onCodeBaked,
     previewWidth,
-    onPreviewLayout: setPreviewArea,
+    previewHeight,
   };
 }

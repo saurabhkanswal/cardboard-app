@@ -15,6 +15,24 @@ const preview = (hash: string) => `${PREVIEW_BASE}/${hash}.mp4`;
  */
 const MOCK_SHOWCASE: ShowcaseDTO = [
   {
+    // Recipes the laptop bridge can run end to end.
+    id: 'laptop-ready',
+    title: 'Remix with your laptop',
+    videos: [
+      {id: 'laptop-ready-simple-ugc', url: preview('ef3a00a5550a4681'), recipeId: 'simple-ugc'},
+      {
+        id: 'laptop-ready-laptop-feature',
+        url: preview('4650712fbaf9dbfe'),
+        recipeId: 'laptop-product-overview',
+      },
+      {
+        id: 'laptop-ready-podcast-review',
+        url: preview('d8f3703e08a1b189'),
+        recipeId: 'podcast-product-review',
+      },
+    ],
+  },
+  {
     id: 'launch-video',
     title: 'Launch video',
     videos: [
@@ -23,7 +41,7 @@ const MOCK_SHOWCASE: ShowcaseDTO = [
       {id: 'launch-video-3', url: preview('219f622b21418890')},
       {id: 'launch-video-4', url: preview('b29b32da636455c6')},
       {id: 'launch-video-5', url: preview('29c7347bf074e238')},
-      {id: 'launch-video-6', url: preview('ef3a00a5550a4681')},
+      {id: 'launch-video-6', url: preview('ef3a00a5550a4681'), recipeId: 'simple-ugc'},
     ],
   },
   {

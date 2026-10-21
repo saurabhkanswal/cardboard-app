@@ -20,7 +20,7 @@ const PRESS_PENDING = -1;
  * Media is the master: while a video clip is on screen and playing, its layer writes
  * the playhead from the player's own time (so picture, sound and anything drawn
  * from the playhead stay in sync). This clock only free-runs on real time where no
- * clip is on screen, detects the end, and records dev stats.
+ * clip is on screen, detects the end (rewinding to 0), and records dev stats.
  */
 export interface PlaybackClock {
   /** Timeline seconds. */
@@ -76,7 +76,8 @@ export function usePlaybackClock(duration: number) {
       playhead.value = Math.min(durationSV.value, playhead.value + dt / 1000);
     }
     if (playhead.value >= durationSV.value) {
-      playhead.value = durationSV.value;
+      // Finished: rewind to the start (paused clip layers seek back to frame 0).
+      playhead.value = 0;
       playing.value = false;
       scheduleOnRN(setIsPlaying, false);
     }

@@ -179,7 +179,10 @@ export interface TimelineSnapshot {
   diagnostics: Diagnostic[];
 }
 
-/** `POST /projects` (multipart: `video` file + `kitId`, optional `prompt`, `names`). */
+/**
+ * `POST /projects` (multipart: 1–5 `video` file parts, in order, + `kitId`, optional `prompt`, `names`, and `inputs`:
+ * a JSON object of the kit's text inputs by id, e.g. `{"topic": "…", "brief": "…"}`).
+ */
 export interface CreateProjectResponse {
   project: ProjectSummary;
 }
@@ -188,6 +191,28 @@ export interface CreateProjectResponse {
 export interface ProjectResponse {
   project: ProjectSummary;
   timeline: TimelineSnapshot | null;
+}
+
+/**
+ * `POST /projects/:id/export` (multipart): a `manifest` field (JSON `ExportManifest`) plus one
+ * `overlay` PNG part per frame, in manifest order (layers in order, each layer's frames in
+ * order). Overlays are the phone's rendered `<code>` layers (the bridge can't draw them);
+ * the bridge composites them over the clips with ffmpeg. 202 → `ExportResponse`; progress
+ * and the result arrive as `job` events with `name: 'export'`.
+ */
+export interface ExportManifest {
+  /** The committed rev the overlays were rendered from (409 if the project moved on). */
+  rev: number;
+  layers: {
+    /** A `<code>` element id in that rev's timeline. */
+    elementId: string;
+    /** Contiguous frames in timeline seconds; frame `i` is the `i`th overlay of this layer. */
+    frames: {start: number; end: number}[];
+  }[];
+}
+
+export interface ExportResponse {
+  exportId: string;
 }
 
 /** `POST /projects/:id/messages` body. */
@@ -212,9 +237,13 @@ export type ServerEvent =
   | {
       type: 'job';
       projectId: string;
-      name: 'transcribe';
+      name: 'transcribe' | 'export';
       state: 'running' | 'done' | 'error';
       message?: string;
+      /** 0–1 while running (export only). */
+      progress?: number;
+      /** Export `done`: the MP4, `GET <url><path>?token=`. */
+      path?: string;
     };
 
 /** Messages the app sends over the WebSocket. */

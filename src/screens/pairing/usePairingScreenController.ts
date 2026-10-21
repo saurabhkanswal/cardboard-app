@@ -1,5 +1,6 @@
 import {useCallback, useRef, useState} from 'react';
 import {Alert} from 'react-native';
+import {useNavigation} from '@react-navigation/native';
 import {
   usePairingViewModel,
   type PairResult,
@@ -24,6 +25,7 @@ function errorFor(result: PairResult): string | null {
  */
 export function usePairingScreenController() {
   const vm = usePairingViewModel();
+  const navigation = useNavigation();
   const [isScanning, setIsScanning] = useState(false);
   const [code, setCode] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -64,7 +66,10 @@ export function usePairingScreenController() {
     setIsScanning(true);
   }, [vm]);
 
+  const onClose = useCallback(() => navigation.goBack(), [navigation]);
+
   return {
+    onClose,
     status: vm.status,
     bridgeName: vm.bridgeName,
     bridgeUrl: vm.bridgeUrl,

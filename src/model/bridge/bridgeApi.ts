@@ -1,9 +1,14 @@
 import {baseApi} from '../api/baseApi';
+import {deleteFiles, writeTempPngs} from '../export/exportFiles';
 import {selectPairing, type PairingState} from './pairingSlice';
 import type {
   CreateProjectResponse,
+  ExportManifest,
+  ExportResponse,
   HealthResponse,
   PairingPayload,
+  ProjectResponse,
+  SendMessageRequest,
 } from './protocol';
 
 /** Plain requests fail fast when the laptop is off the network; uploads get longer. */
@@ -21,15 +26,29 @@ export interface UploadFile {
 
 export interface CreateProjectArgs {
   kitId: string;
-  video: UploadFile;
+  /** Clips in order; each is sent as a repeated `video` part. */
+  videos: UploadFile[];
   prompt?: string;
   names?: string;
+  /** The kit's text inputs by id, e.g. `{topic, brief}`; written to the project's `inputs.json`. */
+  inputs?: Record<string, string>;
 }
 
 export interface CompiledTemplatesArgs {
   projectId: string;
   /** Workspace paths, e.g. `recipe/templates/captions.jsx`. */
   templates: string[];
+}
+
+export interface ProjectMessageArgs extends SendMessageRequest {
+  projectId: string;
+}
+
+export interface StartExportArgs {
+  projectId: string;
+  manifest: ExportManifest;
+  /** One PNG per manifest frame, in manifest order. */
+  pngs: Uint8Array[];
 }
 
 type Result<T> = {data: T} | {error: BridgeError};
@@ -127,7 +146,7 @@ export const bridgeApi = baseApi.injectEndpoints({
 
     /** Uploads the footage and starts a project (transcribe → first agent turn). */
     createProject: build.mutation<CreateProjectResponse, CreateProjectArgs>({
-      queryFn: ({kitId, video, prompt, names}, {getState}) => {
+      queryFn: ({kitId, videos, prompt, names, inputs}, {getState}) => {
         const form = new FormData();
         form.append('kitId', kitId);
         if (prompt) {
@@ -136,8 +155,13 @@ export const bridgeApi = baseApi.injectEndpoints({
         if (names) {
           form.append('names', names);
         }
+        if (inputs) {
+          form.append('inputs', JSON.stringify(inputs));
+        }
         // React Native's FormData accepts a {uri, name, type} file descriptor.
-        form.append('video', video as unknown as Blob);
+        for (const video of videos) {
+          form.append('video', video as unknown as Blob);
+        }
         return bridgeUpload<CreateProjectResponse>(pairingOf(getState), '/projects', form);
       },
     }),
@@ -166,6 +190,55 @@ export const bridgeApi = baseApi.injectEndpoints({
         return {data: sources};
       },
     }),
+
+    /** Starts a director turn with the user's instruction (409 while a turn is running). */
+    sendProjectMessage: build.mutation<{ok: true}, ProjectMessageArgs>({
+      queryFn: ({projectId, text}, {getState}) =>
+        bridgeFetch<{ok: true}>(pairingOf(getState), `/projects/${projectId}/messages`, {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({text} satisfies SendMessageRequest),
+        }),
+    }),
+
+    /** Aborts the running turn; its partial edits are still committed as one rev. */
+    cancelProjectTurn: build.mutation<{ok: boolean}, {projectId: string}>({
+      queryFn: ({projectId}, {getState}) =>
+        bridgeFetch<{ok: boolean}>(pairingOf(getState), `/projects/${projectId}/cancel`, {method: 'POST'}),
+    }),
+
+    /** Reverts the last committed turn (409 at rev 0 or while running). */
+    undoProjectTurn: build.mutation<Pick<ProjectResponse, 'project'>, {projectId: string}>({
+      queryFn: ({projectId}, {getState}) =>
+        bridgeFetch<Pick<ProjectResponse, 'project'>>(
+          pairingOf(getState),
+          `/projects/${projectId}/undo`, {method: 'POST'}),
+    }),
+
+    /**
+     * Uploads the caption overlays and starts the bridge's MP4 render (202). Progress and
+     * the result arrive as `job` events with `name: 'export'`.
+     */
+    startExport: build.mutation<ExportResponse, StartExportArgs>({
+      queryFn: async ({projectId, manifest, pngs}, {getState}) => {
+        const uris = await writeTempPngs(pngs);
+        try {
+          const form = new FormData();
+          form.append('manifest', JSON.stringify(manifest));
+          uris.forEach((uri, i) => {
+            const part: UploadFile = {uri, name: `overlay-${i}.png`, type: 'image/png'};
+            form.append('overlay', part as unknown as Blob);
+          });
+          return await bridgeUpload<ExportResponse>(
+            pairingOf(getState),
+            `/projects/${projectId}/export`,
+            form,
+          );
+        } finally {
+          deleteFiles(uris);
+        }
+      },
+    }),
   }),
   overrideExisting: false,
 });
@@ -174,4 +247,8 @@ export const {
   useCheckBridgeHealthMutation,
   useCreateProjectMutation,
   useGetCompiledTemplatesQuery,
+  useSendProjectMessageMutation,
+  useCancelProjectTurnMutation,
+  useUndoProjectTurnMutation,
+  useStartExportMutation,
 } = bridgeApi;

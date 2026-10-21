@@ -2,6 +2,9 @@
   "name": "CardboardApp",
   "displayName": "CardboardApp",
   "plugins": [
-    "expo-video"
+    "expo-video",
+    "expo-image",
+    "expo-sqlite",
+    "expo-asset"
   ]
 }

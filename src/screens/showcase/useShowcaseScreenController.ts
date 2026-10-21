@@ -1,20 +1,53 @@
 import {useCallback, useEffect, useMemo, useRef, useState} from 'react';
-import {AppState, type ListViewToken as ViewToken} from 'react-native';
-import {useIsFocused, useNavigation} from '@react-navigation/native';
+import {AppState, useWindowDimensions, type ListViewToken as ViewToken} from 'react-native';
+import {useIsFocused, useNavigation, useRoute, type RouteProp} from '@react-navigation/native';
 import {useShowcaseViewModel} from '../../viewmodel/showcase/useShowcaseViewModel';
 import {getActiveGridIds} from '../../viewmodel/showcase/showcaseRules';
 import type {Section} from '../../viewmodel/showcase/types';
+import {useProjectsViewModel} from '../../viewmodel/projects/useProjectsViewModel';
+import type {ExportedProject} from '../../viewmodel/projects/types';
+import {spacing} from '../../theme';
 
 type ViewabilityHandler = (info: {viewableItems: ViewToken[]}) => void;
 
 /** Top-level tabs on the showcase screen. */
 export type ShowcaseTab = 'recipes' | 'projects';
 
+/** Declared locally (a `type`, so it satisfies ParamListBase) — screens may not import app/. */
+type ShowcaseParamList = {
+  Showcase: {tab?: ShowcaseTab} | undefined;
+};
+
+/** "Your projects" grid: columns, and the side gutter / gap the tile size is fitted to. */
+const PROJECT_COLUMNS = 2;
+const PROJECT_GUTTER = spacing.lg;
+const PROJECT_GAP = spacing.md;
+/** Rows of the grid allowed to hold a player at once (× PROJECT_COLUMNS). */
+const PROJECT_ACTIVE_ROWS = 3;
+
+/** One row of the "Your projects" grid; rows share the outer list with the recipe rails. */
+export interface ProjectRow {
+  id: string;
+  projects: ExportedProject[];
+}
+
+/** An item of the outer vertical list: a recipe rail or a row of projects. */
+export type ShowcaseItem =
+  | {kind: 'rail'; id: string; section: Section}
+  | {kind: 'projects'; id: string; row: ProjectRow};
+
 export interface ShowcaseScreenController {
   activeTab: ShowcaseTab;
   setActiveTab: (tab: ShowcaseTab) => void;
-  /** Rails to render for the active tab (empty on "projects" until it's built). */
-  sections: Section[];
+  /** Recipe rails, or rows of exported projects, for the active tab. */
+  items: ShowcaseItem[];
+  /** "Your projects" is selected and has nothing in it yet. */
+  isProjectsEmpty: boolean;
+  projectTileWidth: number;
+  projectTileHeight: number;
+  projectGap: number;
+  /** Opens an exported project full screen. */
+  onPressProject: (id: string) => void;
   isLoading: boolean;
   error: unknown;
   /** Ids in the active 3×3 window (top 3 on-screen rails × first 3 visible tiles). */
@@ -34,6 +67,8 @@ export interface ShowcaseScreenController {
     videoId: string;
     uri: string;
   }) => void;
+  /** Opens the laptop-bridge pairing modal. */
+  onPressConnect: () => void;
 }
 
 /**
@@ -47,8 +82,40 @@ export function useShowcaseScreenController(): ShowcaseScreenController {
   const {sections, isLoading, error, refetch} = useShowcaseViewModel();
   const navigation = useNavigation();
   const [activeTab, setActiveTab] = useState<ShowcaseTab>('recipes');
-  // Projects has no content yet; rendering no rails also releases every player.
-  const visibleSections = activeTab === 'recipes' ? sections : [];
+  // Other screens can ask for a tab, e.g. the editor lands on "projects" after export.
+  const requestedTab = useRoute<RouteProp<ShowcaseParamList, 'Showcase'>>().params?.tab;
+  useEffect(() => {
+    if (requestedTab) {
+      setActiveTab(requestedTab);
+      // Consume it, so asking for the same tab again still switches.
+      navigation.setParams({tab: undefined});
+    }
+  }, [requestedTab, navigation]);
+  const {projects} = useProjectsViewModel();
+  const window = useWindowDimensions();
+  const projectTileWidth = Math.floor(
+    (window.width - 2 * PROJECT_GUTTER - (PROJECT_COLUMNS - 1) * PROJECT_GAP) / PROJECT_COLUMNS,
+  );
+  // Exports are vertical reels.
+  const projectTileHeight = Math.round((projectTileWidth * 16) / 9);
+
+  const projectRows = useMemo(() => {
+    const rows: ProjectRow[] = [];
+    for (let i = 0; i < projects.length; i += PROJECT_COLUMNS) {
+      const chunk = projects.slice(i, i + PROJECT_COLUMNS);
+      rows.push({id: `projects-${chunk[0].id}`, projects: chunk});
+    }
+    return rows;
+  }, [projects]);
+
+  // Only the active tab's items render, so the other tab's players are released.
+  const items = useMemo<ShowcaseItem[]>(
+    () =>
+      activeTab === 'recipes'
+        ? sections.map(section => ({kind: 'rail', id: section.id, section}))
+        : projectRows.map(row => ({kind: 'projects', id: row.id, row})),
+    [activeTab, sections, projectRows],
+  );
 
   // Visible tile ids per rail, keyed by sectionId.
   const [visibleByRail, setVisibleByRail] = useState<Record<string, string[]>>(
@@ -106,12 +173,19 @@ export function useShowcaseScreenController(): ShowcaseScreenController {
   // Active window: top 3 on-screen rails × first 3 visible tiles of each. Only these
   // hold a player, which keeps live decoders bounded however many rails there are;
   // the window slides as the user scrolls either axis.
+  // On "Your projects" the same rule runs over the visible grid rows (3 rows × 2).
   const loadedIds = useMemo(() => {
+    if (activeTab === 'projects') {
+      const visibleRows = projectRows
+        .filter(row => visibleSectionIds.has(row.id))
+        .map(row => row.projects.map(p => p.id));
+      return new Set(getActiveGridIds(visibleRows, PROJECT_ACTIVE_ROWS, PROJECT_COLUMNS));
+    }
     const visibleIdsByRail = sections
       .filter(section => visibleSectionIds.has(section.id))
       .map(section => visibleByRail[section.id] ?? []);
     return new Set(getActiveGridIds(visibleIdsByRail));
-  }, [sections, visibleSectionIds, visibleByRail]);
+  }, [activeTab, projectRows, sections, visibleSectionIds, visibleByRail]);
 
   // Everything in the window plays, unless the screen is blurred or backgrounded.
   const playingIds = useMemo(
@@ -129,15 +203,34 @@ export function useShowcaseScreenController(): ShowcaseScreenController {
       videoId: string;
       uri: string;
     }) => {
-      navigation.navigate('Remix', {sectionId, videoId, uri});
+      // The tile only knows ids; the recipe comes from the showcase data.
+      const recipeId = sections
+        .find(section => section.id === sectionId)
+        ?.videos.find(video => video.id === videoId)?.recipeId;
+      navigation.navigate('Remix', {sectionId, videoId, uri, recipeId});
     },
+    [navigation, sections],
+  );
+
+  const onPressProject = useCallback(
+    (id: string) => navigation.navigate('ProjectPlayer', {id}),
+    [navigation],
+  );
+
+  const onPressConnect = useCallback(
+    () => navigation.navigate('Pairing'),
     [navigation],
   );
 
   return {
     activeTab,
     setActiveTab,
-    sections: visibleSections,
+    items,
+    isProjectsEmpty: activeTab === 'projects' && projects.length === 0,
+    projectTileWidth,
+    projectTileHeight,
+    projectGap: PROJECT_GAP,
+    onPressProject,
     isLoading,
     error,
     loadedIds,
@@ -148,5 +241,6 @@ export function useShowcaseScreenController(): ShowcaseScreenController {
     onSectionsViewableChanged,
     getViewabilityHandler,
     onPressVideo,
+    onPressConnect,
   };
 }

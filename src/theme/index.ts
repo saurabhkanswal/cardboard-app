@@ -18,6 +18,8 @@ export const colors = {
   success: '#3DDC84',
   warning: '#F5B942',
   danger: '#FF5C5C',
+  /** Dark red for Cancel actions in headers. */
+  cancel: '#C8373B',
   /** Hairline borders on dark surfaces (e.g. the segmented tab track). */
   border: '#2A2A33',
   /** Light separator line between page sections. */
@@ -25,6 +27,9 @@ export const colors = {
   /** Light fill for a selected segment, and the dark text that sits on it. */
   segmentActive: '#EBEBED',
   textOnLight: '#111114',
+  /** Chat: the user's message bubble, and the composer's rounded field. */
+  bubbleUser: '#26262F',
+  composer: '#1A1A21',
   /** Rotating hero terms — one colour each. */
   heroCreators: '#A78BFA',
   heroYoutube: '#FF0000',
@@ -45,4 +50,10 @@ export const TILE_HEIGHT = 210;
 
 export const radius = {
   tile: 12,
+  /** Top corners of modal bottom sheets. */
+  sheet: 20,
+  /** Chat bubbles and pill chips. */
+  bubble: 18,
+  /** The chat composer's rounded field. */
+  composer: 26,
 } as const;
