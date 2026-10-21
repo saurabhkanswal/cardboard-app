@@ -37,7 +37,7 @@ QR scanning needs a real device. In the simulator, paste the pairing code instea
 ## Connecting to the laptop (bridge)
 
 The editor's AI runs on your laptop, not the phone. The bridge is a separate repo:
-**[cardboard-bridge](<BRIDGE_REPO_URL>)**.
+**[cardboard-bridge](https://github.com/saurabhkanswal/cardboard-bridge)**.
 
 ```sh
 # in the bridge repo
